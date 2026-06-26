@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import Income from './pages/Income';
 import Expenses from './pages/Expenses';
+import Investments from './pages/Investments';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="/" element={<Protected><Dashboard /></Protected>} />
               <Route path="/receitas" element={<Protected><Income /></Protected>} />
               <Route path="/despesas" element={<Protected><Expenses /></Protected>} />
+              <Route path="/investimentos" element={<Protected><Investments /></Protected>} />
               <Route path="/metas" element={<Protected><Goals /></Protected>} />
               <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
               <Route path="/perfil" element={<Protected><Profile /></Protected>} />

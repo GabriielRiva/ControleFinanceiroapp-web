@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { subscribeTransactions } from '../services/transactionService';
 import { subscribeGoals } from '../services/goalService';
+import { subscribeInvestments, subscribeSnapshots } from '../services/investmentService';
 import { currentMonthKey, monthKey } from '../utils/format';
 
 const DataContext = createContext(null);
@@ -10,6 +11,8 @@ export function DataProvider({ children }) {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [investments, setInvestments] = useState([]);
+  const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
 
@@ -17,28 +20,39 @@ export function DataProvider({ children }) {
     if (!user) {
       setTransactions([]);
       setGoals([]);
+      setInvestments([]);
+      setSnapshots([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    let gotTx = false;
-    let gotGoals = false;
+    const done = { tx: false, goals: false };
     const settle = () => {
-      if (gotTx && gotGoals) setLoading(false);
+      if (done.tx && done.goals) setLoading(false);
     };
 
     const unsubT = subscribeTransactions(
       user.uid,
-      (list) => { setTransactions(list); gotTx = true; settle(); },
-      () => { setIndexError(true); gotTx = true; settle(); }
+      (list) => { setTransactions(list); done.tx = true; settle(); },
+      () => { setIndexError(true); done.tx = true; settle(); }
     );
     const unsubG = subscribeGoals(
       user.uid,
-      (list) => { setGoals(list); gotGoals = true; settle(); },
-      () => { setIndexError(true); gotGoals = true; settle(); }
+      (list) => { setGoals(list); done.goals = true; settle(); },
+      () => { setIndexError(true); done.goals = true; settle(); }
+    );
+    const unsubI = subscribeInvestments(
+      user.uid,
+      (list) => setInvestments(list),
+      () => {}
+    );
+    const unsubS = subscribeSnapshots(
+      user.uid,
+      (list) => setSnapshots(list),
+      () => {}
     );
 
-    return () => { unsubT(); unsubG(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -65,8 +79,25 @@ export function DataProvider({ children }) {
     };
   }, [transactions]);
 
+  // Totais da carteira de investimentos
+  const portfolio = useMemo(() => {
+    let invested = 0, current = 0;
+    for (const p of investments) {
+      invested += Number(p.invested) || 0;
+      current += Number(p.currentValue) || 0;
+    }
+    const profit = current - invested;
+    const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
+    return { invested, current, profit, profitPct };
+  }, [investments]);
+
   return (
-    <DataContext.Provider value={{ transactions, goals, loading, indexError, summary }}>
+    <DataContext.Provider
+      value={{
+        transactions, goals, investments, snapshots,
+        loading, indexError, summary, portfolio,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );

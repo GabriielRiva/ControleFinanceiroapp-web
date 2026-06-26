@@ -622,3 +622,22 @@ button {
   height: 1px;
   background: var(--border);
 }
+
+/* avatar no topo (acesso ao perfil) */
+.avatar-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: var(--on-brand);
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 0.92rem;
+  border: none;
+}
+.avatar-btn:hover { filter: brightness(1.06); }
+
+/* na barra inferior, 6 itens: leve aperto no texto */
+@media (max-width: 860px) {
+  .bottom-link { font-size: 0.62rem; padding: 4px 4px; }
+}

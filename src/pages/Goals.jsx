@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, PiggyBank } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { addGoal, updateGoal, deleteGoal } from '../services/goalService';
 import { formatCurrency, formatDate, daysUntil } from '../utils/format';
 import GoalModal from '../components/GoalModal';
+import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Goals() {
@@ -13,6 +14,7 @@ export default function Goals() {
   const { user } = useAuth();
   const { notify } = useToast();
   const [modal, setModal] = useState(null);
+  const [aporte, setAporte] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -40,6 +42,25 @@ export default function Goals() {
       notify('Meta excluída.');
     } catch {
       notify('Não foi possível excluir.', 'err');
+    }
+  };
+
+  const handleAporte = async (amount) => {
+    setSaving(true);
+    try {
+      const novo = (Number(aporte.currentAmount) || 0) + amount;
+      await updateGoal(aporte.id, {
+        name: aporte.name,
+        targetAmount: Number(aporte.targetAmount) || 0,
+        currentAmount: novo,
+        deadline: aporte.deadline,
+      });
+      notify('Valor adicionado à meta! 🎉');
+      setAporte(null);
+    } catch {
+      notify('Não foi possível adicionar.', 'err');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -86,6 +107,16 @@ export default function Goals() {
                   </div>
                   <div className="row gap-sm">
                     <div className="goal-pct" style={{ marginRight: 4 }}>{pct}%</div>
+                    {!done && (
+                      <button
+                        className="btn btn-primary"
+                        style={{ padding: '7px 12px', fontSize: '0.84rem' }}
+                        onClick={() => setAporte(g)}
+                        aria-label="Adicionar valor guardado"
+                      >
+                        <PiggyBank size={15} /> Guardar
+                      </button>
+                    )}
                     <button className="mini-btn" onClick={() => setModal({ edit: g })} aria-label="Editar">
                       <Pencil size={16} />
                     </button>
@@ -107,6 +138,18 @@ export default function Goals() {
             );
           })}
         </div>
+      )}
+
+      {aporte && (
+        <QuickAmountModal
+          title={`Guardar em "${aporte.name}"`}
+          label="Quanto você guardou agora? (R$)"
+          hint={`Atual: ${formatCurrency(aporte.currentAmount)} de ${formatCurrency(aporte.targetAmount)}. O valor abaixo será somado.`}
+          cta="Adicionar à meta"
+          saving={saving}
+          onConfirm={handleAporte}
+          onClose={() => setAporte(null)}
+        />
       )}
 
       {modal && (

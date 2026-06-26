@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, MONTH_SHORT, greeting, daysUntil } from '../utils/format';
@@ -29,7 +29,7 @@ function lastMonths(transactions, count = 6) {
 }
 
 export default function Dashboard() {
-  const { summary, transactions, goals, loading, indexError } = useData();
+  const { summary, transactions, goals, loading, indexError, portfolio } = useData();
   const { profile, user } = useAuth();
 
   const chart = useMemo(() => lastMonths(transactions, 6), [transactions]);
@@ -91,6 +91,24 @@ export default function Dashboard() {
           <div className="val" style={{ color: 'var(--brand-strong)' }}>{formatCurrency(summary.savings)}</div>
         </div>
       </div>
+
+      {/* card de investimentos (só aparece se houver carteira) */}
+      {portfolio.current > 0 && (
+        <Link to="/investimentos" className="card card-pad between" style={{ marginBottom: 22, textDecoration: 'none', color: 'inherit' }}>
+          <div>
+            <div className="cap muted row gap-sm" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              <LineChart size={15} /> Patrimônio investido
+            </div>
+            <div className="num" style={{ fontWeight: 700, fontSize: '1.5rem', marginTop: 6 }}>
+              {formatCurrency(portfolio.current)}
+            </div>
+            <div className="num" style={{ color: portfolio.profit >= 0 ? 'var(--income)' : 'var(--expense)', fontWeight: 600, fontSize: '0.85rem', marginTop: 2 }}>
+              {portfolio.profit >= 0 ? '+' : ''}{formatCurrency(portfolio.profit)} ({portfolio.profitPct.toFixed(2)}%)
+            </div>
+          </div>
+          <ArrowRight size={20} className="muted" />
+        </Link>
+      )}
 
       {/* CHART */}
       <h2 className="section-title">Últimos 6 meses</h2>

@@ -52,6 +52,14 @@ export function currentMonthKey() {
   return todayISO().slice(0, 7);
 }
 
+// "2026-06" -> "Jun/26"
+export function monthLabelFromKey(key) {
+  if (!key) return '';
+  const [y, m] = key.split('-');
+  const idx = (parseInt(m, 10) || 1) - 1;
+  return `${MONTH_SHORT[idx]}/${(y || '').slice(2)}`;
+}
+
 // dias entre hoje e uma data ISO (negativo = já passou)
 export function daysUntil(iso) {
   if (!iso) return null;

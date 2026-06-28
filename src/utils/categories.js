@@ -34,3 +34,8 @@ export function categoryColor(cat) {
   const i = all.indexOf(cat);
   return PALETTE[(i < 0 ? 0 : i) % PALETTE.length];
 }
+
+// Cor estável por posição na lista (usada nos investimentos, que têm nomes livres)
+export function colorByIndex(i) {
+  return PALETTE[((i % PALETTE.length) + PALETTE.length) % PALETTE.length];
+}

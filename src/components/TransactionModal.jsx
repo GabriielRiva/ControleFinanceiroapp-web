@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import Modal from './Modal';
+import CurrencyInput from './CurrencyInput';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryIcon } from '../utils/categories';
-import { parseAmount, todayISO } from '../utils/format';
+import { formatCurrency, todayISO } from '../utils/format';
 
 export default function TransactionModal({ type, initial, onSave, onClose, saving }) {
   const isIncome = type === 'income';
   const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const [description, setDescription] = useState(initial?.description || '');
-  const [amount, setAmount] = useState(
-    initial?.amount != null ? String(initial.amount).replace('.', ',') : ''
-  );
+  const [amount, setAmount] = useState(Number(initial?.amount) || 0);
   const [category, setCategory] = useState(initial?.category || cats[0]);
   const [date, setDate] = useState(initial?.date || todayISO());
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod || PAYMENT_METHODS[1]);
+  const [installments, setInstallments] = useState(1);
   const [error, setError] = useState('');
 
+  const isCredit = !isIncome && paymentMethod === 'Cartão de crédito';
+  const showInstallments = isCredit && !initial; // só ao criar nova despesa
+
   const submit = () => {
-    const value = parseAmount(amount);
+    const value = amount;
     if (!description.trim()) return setError('Dê uma descrição para o lançamento.');
     if (value <= 0) return setError('Informe um valor maior que zero.');
     setError('');
@@ -28,6 +31,7 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
       category,
       date,
       paymentMethod: isIncome ? null : paymentMethod,
+      installments: showInstallments ? Number(installments) : 1,
     });
   };
 
@@ -59,13 +63,7 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
 
       <div className="field">
         <label className="label">Valor (R$)</label>
-        <input
-          className="input num"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0,00"
-        />
+        <CurrencyInput value={amount} onChange={setAmount} />
       </div>
 
       <div className="field">
@@ -92,6 +90,29 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {showInstallments && (
+        <div className="field">
+          <label className="label">Parcelas</label>
+          <select
+            className="select"
+            value={installments}
+            onChange={(e) => setInstallments(Number(e.target.value))}
+          >
+            {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n === 1 ? 'À vista (1x)' : `${n}x`}
+              </option>
+            ))}
+          </select>
+          {installments > 1 && amount > 0 && (
+            <span className="muted" style={{ fontSize: '0.8rem' }}>
+              {installments}x de {(amount / installments).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              {' '}· uma despesa por mês até quitar
+            </span>
+          )}
         </div>
       )}
 

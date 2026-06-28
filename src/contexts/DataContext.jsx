@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { subscribeTransactions } from '../services/transactionService';
 import { subscribeGoals } from '../services/goalService';
 import { subscribeInvestments, subscribeSnapshots } from '../services/investmentService';
+import { subscribeRecurring, generateDueRecurring } from '../services/recurringService';
 import { currentMonthKey, monthKey } from '../utils/format';
 
 const DataContext = createContext(null);
@@ -13,8 +14,10 @@ export function DataProvider({ children }) {
   const [goals, setGoals] = useState([]);
   const [investments, setInvestments] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
+  const [recurring, setRecurring] = useState([]);
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
+  const generatedRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -22,7 +25,9 @@ export function DataProvider({ children }) {
       setGoals([]);
       setInvestments([]);
       setSnapshots([]);
+      setRecurring([]);
       setLoading(false);
+      generatedRef.current = false;
       return;
     }
     setLoading(true);
@@ -51,8 +56,22 @@ export function DataProvider({ children }) {
       (list) => setSnapshots(list),
       () => {}
     );
+    const unsubR = subscribeRecurring(
+      user.uid,
+      (list) => {
+        setRecurring(list);
+        // Caminho B: ao abrir o app, gera as contas fixas pendentes (uma vez por sessão).
+        if (!generatedRef.current && list.length > 0) {
+          generatedRef.current = true;
+          generateDueRecurring(user.uid, list).catch((e) =>
+            console.error('falha ao gerar contas fixas:', e)
+          );
+        }
+      },
+      () => {}
+    );
 
-    return () => { unsubT(); unsubG(); unsubI(); unsubS(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -94,7 +113,7 @@ export function DataProvider({ children }) {
   return (
     <DataContext.Provider
       value={{
-        transactions, goals, investments, snapshots,
+        transactions, goals, investments, snapshots, recurring,
         loading, indexError, summary, portfolio,
       }}
     >

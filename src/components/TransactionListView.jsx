@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Repeat } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  addTransaction, updateTransaction, deleteTransaction,
+  addTransaction, addInstallments, updateTransaction, deleteTransaction,
 } from '../services/transactionService';
 import { formatCurrency, formatDate } from '../utils/format';
 import { categoryIcon } from '../utils/categories';
 import TransactionModal from './TransactionModal';
 import ConfirmDialog from './ConfirmDialog';
+import RecurringModal from './RecurringModal';
 
 export default function TransactionListView({ type }) {
   const isIncome = type === 'income';
@@ -20,6 +21,7 @@ export default function TransactionListView({ type }) {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // {edit?: tx}
   const [confirm, setConfirm] = useState(null); // tx
+  const [showRecurring, setShowRecurring] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const items = useMemo(() => {
@@ -41,6 +43,9 @@ export default function TransactionListView({ type }) {
       if (modal?.edit) {
         await updateTransaction(modal.edit.id, data);
         notify('Lançamento atualizado.');
+      } else if (data.installments && data.installments > 1) {
+        await addInstallments(user.uid, data, data.installments);
+        notify(`Compra parcelada em ${data.installments}x criada.`);
       } else {
         await addTransaction(user.uid, data);
         notify(isIncome ? 'Receita adicionada.' : 'Despesa adicionada.');
@@ -83,6 +88,16 @@ export default function TransactionListView({ type }) {
           </button>
         </div>
       </div>
+
+      {!isIncome && (
+        <button
+          className="btn btn-ghost btn-block"
+          style={{ marginBottom: 16, justifyContent: 'flex-start', gap: 10 }}
+          onClick={() => setShowRecurring(true)}
+        >
+          <Repeat size={17} /> Contas fixas (repetem todo mês)
+        </button>
+      )}
 
       <div className="search" style={{ marginBottom: 16 }}>
         <Search size={18} className="faint" />
@@ -147,6 +162,7 @@ export default function TransactionListView({ type }) {
           onClose={() => setConfirm(null)}
         />
       )}
+      {showRecurring && <RecurringModal onClose={() => setShowRecurring(false)} />}
     </>
   );
 }

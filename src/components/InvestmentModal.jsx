@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from './Modal';
-import { parseAmount } from '../utils/format';
+import CurrencyInput from './CurrencyInput';
 
 const SUGGESTIONS = [
   'Renda Fixa', 'Fundos de Investimento', 'Tesouro Direto',
@@ -9,17 +9,13 @@ const SUGGESTIONS = [
 
 export default function InvestmentModal({ initial, onSave, onClose, saving }) {
   const [name, setName] = useState(initial?.name || '');
-  const [invested, setInvested] = useState(
-    initial?.invested != null ? String(initial.invested).replace('.', ',') : ''
-  );
-  const [currentValue, setCurrentValue] = useState(
-    initial?.currentValue != null ? String(initial.currentValue).replace('.', ',') : ''
-  );
+  const [invested, setInvested] = useState(Number(initial?.invested) || 0);
+  const [currentValue, setCurrentValue] = useState(Number(initial?.currentValue) || 0);
   const [error, setError] = useState('');
 
   const submit = () => {
-    const inv = parseAmount(invested);
-    const cur = parseAmount(currentValue);
+    const inv = invested;
+    const cur = currentValue;
     if (!name.trim()) return setError('Dê um nome para o investimento.');
     if (inv <= 0) return setError('Informe quanto você investiu (aportado).');
     setError('');
@@ -56,24 +52,12 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
 
       <div className="field">
         <label className="label">Quanto você investiu (aportado)</label>
-        <input
-          className="input num"
-          inputMode="decimal"
-          value={invested}
-          onChange={(e) => setInvested(e.target.value)}
-          placeholder="0,00"
-        />
+        <CurrencyInput value={invested} onChange={setInvested} />
       </div>
 
       <div className="field" style={{ marginBottom: 0 }}>
         <label className="label">Valor atual na carteira</label>
-        <input
-          className="input num"
-          inputMode="decimal"
-          value={currentValue}
-          onChange={(e) => setCurrentValue(e.target.value)}
-          placeholder="igual ao aportado, se ainda não rendeu"
-        />
+        <CurrencyInput value={currentValue} onChange={setCurrentValue} />
         <span className="muted" style={{ fontSize: '0.78rem' }}>
           Veja esse número no app do seu banco. Pode atualizar quando quiser.
         </span>

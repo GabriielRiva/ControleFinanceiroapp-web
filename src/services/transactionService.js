@@ -11,6 +11,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { addMonthsISO } from '../utils/format';
 
 const col = collection(db, 'transactions');
 
@@ -42,6 +43,37 @@ export async function addTransaction(uid, data) {
     paymentMethod: data.paymentMethod || null,
     createdAt: serverTimestamp(),
   });
+}
+
+// Cria N parcelas a partir do valor TOTAL, uma por mês.
+// Ex: R$ 1.000 em 10x -> 10 despesas de R$ 100 ("desc (1/10)", "desc (2/10)"...).
+export async function addInstallments(uid, data, installments) {
+  const n = Math.max(2, Math.floor(installments));
+  const total = Number(data.amount) || 0;
+  const base = Math.floor((total / n) * 100) / 100; // arredonda p/ baixo
+  const groupId = `${uid}-${Date.now()}`;
+
+  const tasks = [];
+  for (let i = 0; i < n; i++) {
+    // última parcela absorve a diferença de centavos do arredondamento
+    const amount = i === n - 1 ? Math.round((total - base * (n - 1)) * 100) / 100 : base;
+    tasks.push(
+      addDoc(col, {
+        userId: uid,
+        type: 'expense',
+        description: `${data.description} (${i + 1}/${n})`,
+        amount,
+        category: data.category,
+        date: addMonthsISO(data.date, i),
+        paymentMethod: data.paymentMethod || 'Cartão de crédito',
+        installmentGroup: groupId,
+        installmentIndex: i + 1,
+        installmentTotal: n,
+        createdAt: serverTimestamp(),
+      })
+    );
+  }
+  return Promise.all(tasks);
 }
 
 export async function updateTransaction(id, data) {

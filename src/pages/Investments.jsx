@@ -15,7 +15,7 @@ import {
 import {
   formatCurrency, currentMonthKey, monthLabelFromKey,
 } from '../utils/format';
-import { categoryColor } from '../utils/categories';
+import { colorByIndex } from '../utils/categories';
 import InvestmentModal from '../components/InvestmentModal';
 import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -37,6 +37,13 @@ export default function Investments() {
       .map((p) => ({ name: p.name, value: Number(p.currentValue) })),
     [investments]
   );
+
+  // cor própria e estável para cada investimento (por ordem na lista)
+  const colorMap = useMemo(() => {
+    const m = {};
+    investments.forEach((p, i) => { m[p.name] = colorByIndex(i); });
+    return m;
+  }, [investments]);
 
   const evolution = useMemo(
     () => snapshots.map((s) => ({
@@ -190,7 +197,7 @@ export default function Investments() {
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie data={allocation} dataKey="value" nameKey="name" innerRadius={54} outerRadius={88} paddingAngle={2} stroke="none">
-                      {allocation.map((e) => <Cell key={e.name} fill={categoryColor(e.name)} />)}
+                      {allocation.map((e) => <Cell key={e.name} fill={colorMap[e.name]} />)}
                     </Pie>
                     <Tooltip
                       formatter={(v) => formatCurrency(v)}
@@ -205,7 +212,7 @@ export default function Investments() {
                   return (
                     <div className="between" key={c.name} style={{ gap: 12 }}>
                       <span className="row gap-sm">
-                        <i style={{ width: 11, height: 11, borderRadius: 3, background: categoryColor(c.name) }} />
+                        <i style={{ width: 11, height: 11, borderRadius: 3, background: colorMap[c.name] }} />
                         {c.name}
                       </span>
                       <span className="num muted" style={{ fontWeight: 600 }}>{pct}%</span>

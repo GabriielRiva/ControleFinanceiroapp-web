@@ -1,21 +1,18 @@
 import { useState } from 'react';
 import Modal from './Modal';
-import { parseAmount } from '../utils/format';
+import CurrencyInput from './CurrencyInput';
+import { formatCurrency } from '../utils/format';
 
 export default function GoalModal({ initial, onSave, onClose, saving }) {
   const [name, setName] = useState(initial?.name || '');
-  const [targetAmount, setTargetAmount] = useState(
-    initial?.targetAmount != null ? String(initial.targetAmount).replace('.', ',') : ''
-  );
-  const [currentAmount, setCurrentAmount] = useState(
-    initial?.currentAmount != null ? String(initial.currentAmount).replace('.', ',') : '0'
-  );
+  const [targetAmount, setTargetAmount] = useState(Number(initial?.targetAmount) || 0);
+  const [currentAmount, setCurrentAmount] = useState(Number(initial?.currentAmount) || 0);
   const [deadline, setDeadline] = useState(initial?.deadline || '');
   const [error, setError] = useState('');
 
   const submit = () => {
-    const target = parseAmount(targetAmount);
-    const current = parseAmount(currentAmount);
+    const target = targetAmount;
+    const current = currentAmount;
     if (!name.trim()) return setError('Dê um nome para a meta.');
     if (target <= 0) return setError('O valor-alvo precisa ser maior que zero.');
     if (!deadline) return setError('Escolha uma data-limite.');
@@ -51,23 +48,11 @@ export default function GoalModal({ initial, onSave, onClose, saving }) {
       <div className="row gap" style={{ gap: 12 }}>
         <div className="field grow">
           <label className="label">Valor-alvo (R$)</label>
-          <input
-            className="input num"
-            inputMode="decimal"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            placeholder="0,00"
-          />
+          <CurrencyInput value={targetAmount} onChange={setTargetAmount} />
         </div>
         <div className="field grow">
           <label className="label">Já guardado (R$)</label>
-          <input
-            className="input num"
-            inputMode="decimal"
-            value={currentAmount}
-            onChange={(e) => setCurrentAmount(e.target.value)}
-            placeholder="0,00"
-          />
+          <CurrencyInput value={currentAmount} onChange={setCurrentAmount} />
         </div>
       </div>
 

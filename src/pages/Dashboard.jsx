@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart } fr
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, MONTH_SHORT, greeting, daysUntil } from '../utils/format';
+import BudgetSummary from '../components/BudgetSummary';
 
 function lastMonths(transactions, count = 6) {
   const now = new Date();
@@ -78,18 +79,18 @@ export default function Dashboard() {
 
       {/* STATS */}
       <div className="stat-grid" style={{ marginBottom: 22 }}>
-        <div className="card stat">
+        <Link to="/receitas" className="card stat stat-link">
           <div className="cap"><Wallet size={15} /> Receitas (total)</div>
           <div className="val income">{formatCurrency(summary.income)}</div>
-        </div>
-        <div className="card stat">
+        </Link>
+        <Link to="/despesas" className="card stat stat-link">
           <div className="cap"><TrendingDown size={15} /> Despesas (total)</div>
           <div className="val expense">{formatCurrency(summary.expense)}</div>
-        </div>
-        <div className="card stat">
+        </Link>
+        <Link to="/relatorios" className="card stat stat-link">
           <div className="cap"><PiggyBank size={15} /> Economizado</div>
           <div className="val" style={{ color: 'var(--brand-strong)' }}>{formatCurrency(summary.savings)}</div>
-        </div>
+        </Link>
       </div>
 
       {/* card de investimentos (só aparece se houver carteira) */}
@@ -145,6 +146,9 @@ export default function Dashboard() {
           <span className="row gap-sm"><i style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--expense)' }} /> Despesas</span>
         </div>
       </div>
+
+      {/* ORÇAMENTO */}
+      <BudgetSummary />
 
       {/* GOALS */}
       <div className="between" style={{ marginBottom: 14 }}>

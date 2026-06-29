@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryIcon } from '../utils/categories';
 import { formatCurrency, todayISO } from '../utils/format';
 
-export default function TransactionModal({ type, initial, onSave, onClose, saving }) {
+export default function TransactionModal({ type, initial, isEdit, onSave, onClose, saving }) {
   const isIncome = type === 'income';
   const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const { cards } = useData();
@@ -20,7 +20,7 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
   const [error, setError] = useState('');
 
   const isCredit = !isIncome && paymentMethod === 'Cartão de crédito';
-  const showInstallments = isCredit && !initial; // só ao criar nova despesa
+  const showInstallments = isCredit && !isEdit; // só ao criar nova despesa
 
   const submit = () => {
     const value = amount;
@@ -39,11 +39,11 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
     });
   };
 
-  const verb = initial ? 'Salvar alterações' : isIncome ? 'Adicionar receita' : 'Adicionar despesa';
+  const verb = isEdit ? 'Salvar alterações' : isIncome ? 'Adicionar receita' : 'Adicionar despesa';
 
   return (
     <Modal
-      title={initial ? 'Editar lançamento' : isIncome ? 'Nova receita' : 'Nova despesa'}
+      title={isEdit ? 'Editar lançamento' : isIncome ? 'Nova receita' : 'Nova despesa'}
       onClose={onClose}
       footer={
         <>

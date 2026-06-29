@@ -41,6 +41,7 @@ export async function addTransaction(uid, data) {
     category: data.category,
     date: data.date,
     paymentMethod: data.paymentMethod || null,
+    cardId: data.cardId || null,
     createdAt: serverTimestamp(),
   });
 }
@@ -66,6 +67,7 @@ export async function addInstallments(uid, data, installments) {
         category: data.category,
         date: addMonthsISO(data.date, i),
         paymentMethod: data.paymentMethod || 'Cartão de crédito',
+        cardId: data.cardId || null,
         installmentGroup: groupId,
         installmentIndex: i + 1,
         installmentTotal: n,
@@ -83,6 +85,7 @@ export async function updateTransaction(id, data) {
     category: data.category,
     date: data.date,
     paymentMethod: data.paymentMethod || null,
+    cardId: data.cardId || null,
   });
 }
 

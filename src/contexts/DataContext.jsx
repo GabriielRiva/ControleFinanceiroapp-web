@@ -4,6 +4,7 @@ import { subscribeTransactions } from '../services/transactionService';
 import { subscribeGoals } from '../services/goalService';
 import { subscribeInvestments, subscribeSnapshots } from '../services/investmentService';
 import { subscribeRecurring, generateDueRecurring } from '../services/recurringService';
+import { subscribeCards } from '../services/cardService';
 import { currentMonthKey, monthKey } from '../utils/format';
 
 const DataContext = createContext(null);
@@ -15,6 +16,7 @@ export function DataProvider({ children }) {
   const [investments, setInvestments] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [recurring, setRecurring] = useState([]);
+  const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
   const generatedRef = useRef(false);
@@ -26,6 +28,7 @@ export function DataProvider({ children }) {
       setInvestments([]);
       setSnapshots([]);
       setRecurring([]);
+      setCards([]);
       setLoading(false);
       generatedRef.current = false;
       return;
@@ -70,8 +73,9 @@ export function DataProvider({ children }) {
       },
       () => {}
     );
+    const unsubC = subscribeCards(user.uid, (list) => setCards(list), () => {});
 
-    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -113,7 +117,7 @@ export function DataProvider({ children }) {
   return (
     <DataContext.Provider
       value={{
-        transactions, goals, investments, snapshots, recurring,
+        transactions, goals, investments, snapshots, recurring, cards,
         loading, indexError, summary, portfolio,
       }}
     >

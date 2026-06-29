@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import Modal from './Modal';
 import CurrencyInput from './CurrencyInput';
+import { useData } from '../contexts/DataContext';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryIcon } from '../utils/categories';
 import { formatCurrency, todayISO } from '../utils/format';
 
 export default function TransactionModal({ type, initial, onSave, onClose, saving }) {
   const isIncome = type === 'income';
   const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const { cards } = useData();
 
   const [description, setDescription] = useState(initial?.description || '');
   const [amount, setAmount] = useState(Number(initial?.amount) || 0);
   const [category, setCategory] = useState(initial?.category || cats[0]);
   const [date, setDate] = useState(initial?.date || todayISO());
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod || PAYMENT_METHODS[1]);
+  const [cardId, setCardId] = useState(initial?.cardId || '');
   const [installments, setInstallments] = useState(1);
   const [error, setError] = useState('');
 
@@ -31,6 +34,7 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
       category,
       date,
       paymentMethod: isIncome ? null : paymentMethod,
+      cardId: isCredit ? (cardId || null) : null,
       installments: showInstallments ? Number(installments) : 1,
     });
   };
@@ -90,6 +94,25 @@ export default function TransactionModal({ type, initial, onSave, onClose, savin
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {isCredit && (
+        <div className="field">
+          <label className="label">Cartão</label>
+          {cards.length === 0 ? (
+            <p className="muted" style={{ fontSize: '0.82rem' }}>
+              Nenhum cartão cadastrado. Você pode cadastrar em <strong>Despesas → Cartões</strong> para
+              organizar por fatura.
+            </p>
+          ) : (
+            <select className="select" value={cardId} onChange={(e) => setCardId(e.target.value)}>
+              <option value="">Sem cartão específico</option>
+              {cards.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 

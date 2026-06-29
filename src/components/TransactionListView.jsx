@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2, Repeat } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,9 @@ import { categoryIcon } from '../utils/categories';
 import TransactionModal from './TransactionModal';
 import ConfirmDialog from './ConfirmDialog';
 import RecurringModal from './RecurringModal';
+import CardsModal from './CardsModal';
+import InvoicesView from './InvoicesView';
+import FilterBar, { emptyFilters, isFilterActive } from './FilterBar';
 
 export default function TransactionListView({ type }) {
   const isIncome = type === 'income';
@@ -19,23 +22,52 @@ export default function TransactionListView({ type }) {
   const { notify } = useToast();
 
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // {edit?: tx}
-  const [confirm, setConfirm] = useState(null); // tx
+  const [filters, setFilters] = useState({ ...emptyFilters });
+  const [tab, setTab] = useState('list'); // 'list' | 'invoices'
+  const [modal, setModal] = useState(null);
+  const [confirm, setConfirm] = useState(null);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [showCards, setShowCards] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const items = useMemo(() => {
-    const list = transactions.filter((t) => t.type === type);
-    const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (t) =>
-        t.description?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q)
+  // anos disponíveis para o filtro
+  const years = useMemo(() => {
+    const set = new Set(
+      transactions.filter((t) => t.type === type)
+        .map((t) => (t.date || '').slice(0, 4)).filter(Boolean)
     );
-  }, [transactions, type, search]);
+    set.add(String(new Date().getFullYear()));
+    return [...set].sort((a, b) => b - a);
+  }, [transactions, type]);
+
+  const items = useMemo(() => {
+    let list = transactions.filter((t) => t.type === type);
+
+    // busca textual
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (t) => t.description?.toLowerCase().includes(q) || t.category?.toLowerCase().includes(q)
+      );
+    }
+
+    // filtros
+    const f = filters;
+    if (f.from || f.to) {
+      if (f.from) list = list.filter((t) => t.date >= f.from);
+      if (f.to) list = list.filter((t) => t.date <= f.to);
+    } else {
+      if (f.year !== 'all') list = list.filter((t) => (t.date || '').slice(0, 4) === f.year);
+      if (f.month !== 'all') list = list.filter((t) => (t.date || '').slice(5, 7) === f.month);
+    }
+    if (f.category !== 'all') list = list.filter((t) => t.category === f.category);
+    if (!isIncome && f.payment !== 'all') list = list.filter((t) => (t.paymentMethod || '') === f.payment);
+
+    return list;
+  }, [transactions, type, search, filters, isIncome]);
 
   const total = items.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const filtered = search || isFilterActive(filters);
 
   const handleSave = async (data) => {
     setSaving(true);
@@ -71,12 +103,13 @@ export default function TransactionListView({ type }) {
 
   return (
     <>
+      {/* total + adicionar */}
       <div className="card card-pad" style={{ marginBottom: 16 }}>
         <div className="between">
           <div>
             <div className="muted" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
               {isIncome ? 'Total de receitas' : 'Total de despesas'}
-              {search && ' (filtrado)'}
+              {filtered && ' (filtrado)'}
             </div>
             <div className="num" style={{ fontSize: '1.8rem', fontWeight: 700, color: accent, marginTop: 4 }}>
               {formatCurrency(total)}
@@ -89,60 +122,84 @@ export default function TransactionListView({ type }) {
         </div>
       </div>
 
+      {/* botões de gestão (só despesas) */}
       {!isIncome && (
-        <button
-          className="btn btn-ghost btn-block"
-          style={{ marginBottom: 16, justifyContent: 'flex-start', gap: 10 }}
-          onClick={() => setShowRecurring(true)}
-        >
-          <Repeat size={17} /> Contas fixas (repetem todo mês)
-        </button>
+        <div className="row gap wrap" style={{ marginBottom: 16 }}>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowRecurring(true)}>
+            <Repeat size={17} /> Contas fixas
+          </button>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowCards(true)}>
+            <CreditCard size={17} /> Cartões
+          </button>
+        </div>
       )}
 
-      <div className="search" style={{ marginBottom: 16 }}>
-        <Search size={18} className="faint" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por descrição ou categoria"
-        />
-      </div>
+      {/* abas Lançamentos / Faturas (só despesas) */}
+      {!isIncome && (
+        <div className="row gap-sm" style={{ marginBottom: 16 }}>
+          <button className={`chip ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>
+            <FileText size={14} style={{ marginRight: 4 }} /> Lançamentos
+          </button>
+          <button className={`chip ${tab === 'invoices' ? 'active' : ''}`} onClick={() => setTab('invoices')}>
+            <CreditCard size={14} style={{ marginRight: 4 }} /> Faturas
+          </button>
+        </div>
+      )}
 
-      <div className="card">
-        {loading ? (
-          <div className="empty"><div className="spinner" style={{ margin: '0 auto' }} /></div>
-        ) : items.length === 0 ? (
-          <div className="empty">
-            <div className="emoji">{isIncome ? '💰' : '🧾'}</div>
-            <div className="t">{search ? 'Nada encontrado' : isIncome ? 'Nenhuma receita ainda' : 'Nenhuma despesa ainda'}</div>
-            <p>{search ? 'Tente outro termo de busca.' : 'Toque em Adicionar para registrar o primeiro lançamento.'}</p>
+      {tab === 'invoices' && !isIncome ? (
+        <InvoicesView />
+      ) : (
+        <>
+          {/* busca */}
+          <div className="search" style={{ marginBottom: 16 }}>
+            <Search size={18} className="faint" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por descrição ou categoria"
+            />
           </div>
-        ) : (
-          items.map((t) => (
-            <div className="list-item" key={t.id}>
-              <div className="emoji">{categoryIcon(t.category)}</div>
-              <div className="grow" style={{ minWidth: 0 }}>
-                <div className="ttl">{t.description}</div>
-                <div className="sub">
-                  {t.category} · {formatDate(t.date)}
-                  {t.paymentMethod ? ` · ${t.paymentMethod}` : ''}
+
+          {/* filtros */}
+          <FilterBar value={filters} onChange={setFilters} type={type} years={years} />
+
+          <div className="card">
+            {loading ? (
+              <div className="empty"><div className="spinner" style={{ margin: '0 auto' }} /></div>
+            ) : items.length === 0 ? (
+              <div className="empty">
+                <div className="emoji">{isIncome ? '💰' : '🧾'}</div>
+                <div className="t">{filtered ? 'Nada encontrado' : isIncome ? 'Nenhuma receita ainda' : 'Nenhuma despesa ainda'}</div>
+                <p>{filtered ? 'Tente ajustar a busca ou os filtros.' : 'Toque em Adicionar para registrar o primeiro lançamento.'}</p>
+              </div>
+            ) : (
+              items.map((t) => (
+                <div className="list-item" key={t.id}>
+                  <div className="emoji">{categoryIcon(t.category)}</div>
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <div className="ttl">{t.description}</div>
+                    <div className="sub">
+                      {t.category} · {formatDate(t.date)}
+                      {t.paymentMethod ? ` · ${t.paymentMethod}` : ''}
+                    </div>
+                  </div>
+                  <div className="amt" style={{ color: accent }}>
+                    {isIncome ? '+' : '−'} {formatCurrency(t.amount)}
+                  </div>
+                  <div className="row-actions">
+                    <button className="mini-btn" onClick={() => setModal({ edit: t })} aria-label="Editar">
+                      <Pencil size={16} />
+                    </button>
+                    <button className="mini-btn danger" onClick={() => setConfirm(t)} aria-label="Excluir">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="amt" style={{ color: accent }}>
-                {isIncome ? '+' : '−'} {formatCurrency(t.amount)}
-              </div>
-              <div className="row-actions">
-                <button className="mini-btn" onClick={() => setModal({ edit: t })} aria-label="Editar">
-                  <Pencil size={16} />
-                </button>
-                <button className="mini-btn danger" onClick={() => setConfirm(t)} aria-label="Excluir">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       {modal && (
         <TransactionModal
@@ -153,7 +210,6 @@ export default function TransactionListView({ type }) {
           onClose={() => setModal(null)}
         />
       )}
-
       {confirm && (
         <ConfirmDialog
           title="Excluir lançamento"
@@ -163,6 +219,7 @@ export default function TransactionListView({ type }) {
         />
       )}
       {showRecurring && <RecurringModal onClose={() => setShowRecurring(false)} />}
+      {showCards && <CardsModal onClose={() => setShowCards(false)} />}
     </>
   );
 }

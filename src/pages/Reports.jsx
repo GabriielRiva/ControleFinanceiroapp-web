@@ -6,7 +6,7 @@ import {
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { formatCurrency, MONTH_NAMES, MONTH_SHORT } from '../utils/format';
-import { categoryColor } from '../utils/categories';
+import { categoryColor, colorByIndex } from '../utils/categories';
 
 export default function Reports() {
   const { transactions, loading } = useData();
@@ -114,19 +114,6 @@ export default function Reports() {
             <div className="stat-grid" style={{ marginBottom: 16 }}>
               <div>
                 <div className="cap muted row gap-sm" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                  <TrendingDown size={14} /> Despesas
-                </div>
-                <div className="num" style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: 4 }}>
-                  {formatCurrency(delta.cur?.Despesas || 0)}
-                </div>
-                <div className="row gap-sm" style={{ marginTop: 2 }}>
-                  {/* para despesas, subir é ruim (vermelho) e cair é bom (verde) */}
-                  <DeltaPill d={delta.expense} />
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>vs mês anterior</span>
-                </div>
-              </div>
-              <div>
-                <div className="cap muted row gap-sm" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   <TrendingUp size={14} /> Receitas
                 </div>
                 <div className="num" style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: 4 }}>
@@ -141,6 +128,19 @@ export default function Reports() {
                     {delta.income.diff > 0.005 ? <ArrowUpRight size={15} /> : delta.income.diff < -0.005 ? <ArrowDownRight size={15} /> : <Minus size={15} />}
                     {delta.income.diff > 0.005 ? '+' : ''}{delta.income.pct.toFixed(0)}%
                   </span>
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>vs mês anterior</span>
+                </div>
+              </div>
+              <div>
+                <div className="cap muted row gap-sm" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                  <TrendingDown size={14} /> Despesas
+                </div>
+                <div className="num" style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: 4 }}>
+                  {formatCurrency(delta.cur?.Despesas || 0)}
+                </div>
+                <div className="row gap-sm" style={{ marginTop: 2 }}>
+                  {/* para despesas, subir é ruim (vermelho) e cair é bom (verde) */}
+                  <DeltaPill d={delta.expense} />
                   <span className="muted" style={{ fontSize: '0.78rem' }}>vs mês anterior</span>
                 </div>
               </div>
@@ -237,8 +237,8 @@ export default function Reports() {
                     paddingAngle={2}
                     stroke="none"
                   >
-                    {byCategory.map((entry) => (
-                      <Cell key={entry.name} fill={categoryColor(entry.name)} />
+                    {byCategory.map((entry, i) => (
+                      <Cell key={entry.name} fill={colorByIndex(i)} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -253,12 +253,12 @@ export default function Reports() {
             </div>
 
             <div className="col gap-sm grow" style={{ minWidth: 200 }}>
-              {byCategory.map((c) => {
+              {byCategory.map((c, i) => {
                 const pct = Math.round((c.value / totals.expense) * 100);
                 return (
                   <div className="between" key={c.name} style={{ gap: 12 }}>
                     <span className="row gap-sm">
-                      <i style={{ width: 11, height: 11, borderRadius: 3, background: categoryColor(c.name) }} />
+                      <i style={{ width: 11, height: 11, borderRadius: 3, background: colorByIndex(i) }} />
                       {c.name}
                     </span>
                     <span className="num muted" style={{ fontWeight: 600 }}>

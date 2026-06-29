@@ -33,11 +33,12 @@ export const EMOJI_CHOICES = [
   '👶', '💄', '⚽', '🎨', '🌱', '✨',
 ];
 
-// paleta de cores para gráficos
+// paleta de cores para gráficos (ampliada para reduzir repetição)
 const PALETTE = [
-  '#0d9488', '#f59e0b', '#6366f1', '#ec4899',
-  '#14b8a6', '#ef4444', '#8b5cf6', '#10b981',
-  '#f97316', '#3b82f6',
+  '#0d9488', '#f59e0b', '#6366f1', '#ec4899', '#06b6d4',
+  '#ef4444', '#8b5cf6', '#84cc16', '#f97316', '#3b82f6',
+  '#10b981', '#e11d48', '#a855f7', '#eab308', '#14b8a6',
+  '#d946ef', '#22c55e', '#0ea5e9',
 ];
 
 function hashIndex(str) {

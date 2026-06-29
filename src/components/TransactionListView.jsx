@@ -26,7 +26,14 @@ export default function TransactionListView({ type }) {
   const { notify } = useToast();
 
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ ...emptyFilters });
+  const [filters, setFilters] = useState(() => {
+    const now = new Date();
+    return {
+      ...emptyFilters,
+      month: String(now.getMonth() + 1).padStart(2, '0'),
+      year: String(now.getFullYear()),
+    };
+  });
   const [tab, setTab] = useState('list'); // 'list' | 'invoices'
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);

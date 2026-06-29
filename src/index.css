@@ -663,19 +663,23 @@ button {
   color: var(--text);
   text-align: left;
   transition: border-color 0.12s ease, transform 0.06s ease;
-  max-width: 230px;
+  width: 220px;
+  overflow: hidden;
 }
 .fav-chip:hover { border-color: var(--brand); }
 .fav-chip:active { transform: scale(0.98); }
-.fav-chip.sug { border-style: dashed; padding-right: 6px; }
+.fav-chip.sug { border-style: dashed; padding-right: 8px; }
 .fav-inner {
   display: flex;
   align-items: center;
   gap: 9px;
+  min-width: 0;
+  flex: 1;
   background: transparent;
   border: none;
   color: inherit;
   text-align: left;
+  overflow: hidden;
 }
 .fav-emoji {
   width: 34px; height: 34px;
@@ -686,9 +690,9 @@ button {
   display: grid; place-items: center;
   font-size: 1.05rem;
 }
-.fav-txt { display: flex; flex-direction: column; min-width: 0; }
+.fav-txt { display: flex; flex-direction: column; min-width: 0; overflow: hidden; flex: 1; }
 .fav-desc { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fav-amt { font-size: 0.76rem; }
+.fav-amt { font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fav-star {
   width: 28px; height: 28px;
   flex-shrink: 0;

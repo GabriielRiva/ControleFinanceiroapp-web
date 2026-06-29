@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart, Tag } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import {
   addTransaction, addInstallments, updateTransaction, deleteTransaction, restoreTransaction,
 } from '../services/transactionService';
 import { formatCurrency, formatDate } from '../utils/format';
-import { categoryIcon } from '../utils/categories';
+
 import TransactionModal from './TransactionModal';
 import ConfirmDialog from './ConfirmDialog';
 import RecurringModal from './RecurringModal';
@@ -17,10 +17,11 @@ import FilterBar, { emptyFilters, isFilterActive } from './FilterBar';
 import FavoritesBar from './FavoritesBar';
 import FavoritesModal from './FavoritesModal';
 import BudgetModal from './BudgetModal';
+import CategoriesModal from './CategoriesModal';
 
 export default function TransactionListView({ type }) {
   const isIncome = type === 'income';
-  const { transactions, loading } = useData();
+  const { transactions, loading, categoryIcon } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
 
@@ -33,6 +34,7 @@ export default function TransactionListView({ type }) {
   const [showCards, setShowCards] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // anos disponíveis para o filtro
@@ -178,18 +180,22 @@ export default function TransactionListView({ type }) {
           <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowBudget(true)}>
             <PieChart size={17} /> Orçamento
           </button>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowCategories(true)}>
+            <Tag size={17} /> Categorias
+          </button>
         </div>
       )}
 
       {/* gestão de favoritos (receitas) */}
       {isIncome && (
-        <button
-          className="btn btn-ghost btn-block"
-          style={{ marginBottom: 16, justifyContent: 'flex-start', gap: 10 }}
-          onClick={() => setShowFavorites(true)}
-        >
-          <Star size={17} /> Favoritos (lançamento rápido)
-        </button>
+        <div className="row gap wrap" style={{ marginBottom: 16 }}>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowFavorites(true)}>
+            <Star size={17} /> Favoritos
+          </button>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowCategories(true)}>
+            <Tag size={17} /> Categorias
+          </button>
+        </div>
       )}
 
       {/* abas Lançamentos / Faturas (só despesas) */}
@@ -317,6 +323,7 @@ export default function TransactionListView({ type }) {
       {showCards && <CardsModal onClose={() => setShowCards(false)} />}
       {showFavorites && <FavoritesModal type={type} onClose={() => setShowFavorites(false)} />}
       {showBudget && <BudgetModal onClose={() => setShowBudget(false)} />}
+      {showCategories && <CategoriesModal onClose={() => setShowCategories(false)} />}
     </>
   );
 }

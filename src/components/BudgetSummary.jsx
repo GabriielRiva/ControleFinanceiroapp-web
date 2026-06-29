@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Wallet } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { formatCurrency } from '../utils/format';
-import { categoryIcon } from '../utils/categories';
+
 
 export default function BudgetSummary() {
-  const { budgetStatus } = useData();
+  const { budgetStatus, categoryIcon } = useData();
   const { items, totalLimit, totalSpent, totalPct, overCount } = budgetStatus;
 
   if (items.length === 0) return null; // só aparece quando há orçamento definido

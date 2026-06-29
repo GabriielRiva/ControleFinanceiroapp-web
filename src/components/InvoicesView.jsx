@@ -3,10 +3,10 @@ import { CreditCard, ChevronDown, ChevronRight, CalendarClock } from 'lucide-rea
 import { useData } from '../contexts/DataContext';
 import { formatCurrency, formatDate } from '../utils/format';
 import { invoiceMonthForDate, dueDateForInvoice, invoiceLabel } from '../utils/invoice';
-import { colorByIndex, categoryIcon } from '../utils/categories';
+import { colorByIndex } from '../utils/categories';
 
 export default function InvoicesView() {
-  const { transactions, cards } = useData();
+  const { transactions, cards, categoryIcon } = useData();
   const [openKey, setOpenKey] = useState(null);
 
   // monta faturas: para cada cartão, agrupa as despesas por mês de fatura

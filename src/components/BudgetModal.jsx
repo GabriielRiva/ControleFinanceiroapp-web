@@ -6,11 +6,10 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { setBudget, deleteBudget } from '../services/budgetService';
-import { EXPENSE_CATEGORIES, categoryIcon } from '../utils/categories';
 import { formatCurrency } from '../utils/format';
 
 export default function BudgetModal({ onClose }) {
-  const { budgets, budgetStatus } = useData();
+  const { budgets, budgetStatus, expenseCategoryNames, categoryIcon } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
   const [saving, setSaving] = useState('');
@@ -61,7 +60,7 @@ export default function BudgetModal({ onClose }) {
       </p>
 
       <div className="col gap-lg">
-        {EXPENSE_CATEGORIES.map((cat) => {
+        {expenseCategoryNames.map((cat) => {
           const info = spentByCat[cat];
           const spent = info?.spent || 0;
           const limit = valueFor(cat);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../utils/categories';
+import { useData } from '../contexts/DataContext';
+import { PAYMENT_METHODS } from '../utils/categories';
 import { MONTH_NAMES } from '../utils/format';
 
 export const emptyFilters = {
@@ -14,7 +15,8 @@ export function isFilterActive(f) {
 
 export default function FilterBar({ value, onChange, type, years }) {
   const isIncome = type === 'income';
-  const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const { expenseCategoryNames, incomeCategoryNames } = useData();
+  const cats = isIncome ? incomeCategoryNames : expenseCategoryNames;
   const [open, setOpen] = useState(false);
   const set = (patch) => onChange({ ...value, ...patch });
   const active = isFilterActive(value);

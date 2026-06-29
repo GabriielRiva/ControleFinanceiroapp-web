@@ -2,13 +2,13 @@ import { useState } from 'react';
 import Modal from './Modal';
 import CurrencyInput from './CurrencyInput';
 import { useData } from '../contexts/DataContext';
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryIcon } from '../utils/categories';
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../utils/categories';
 import { formatCurrency, todayISO } from '../utils/format';
 
 export default function TransactionModal({ type, initial, isEdit, onSave, onClose, saving }) {
   const isIncome = type === 'income';
-  const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-  const { cards } = useData();
+  const { cards, expenseCategoryNames, incomeCategoryNames, categoryIcon } = useData();
+  const cats = isIncome ? incomeCategoryNames : expenseCategoryNames;
 
   const [description, setDescription] = useState(initial?.description || '');
   const [amount, setAmount] = useState(Number(initial?.amount) || 0);

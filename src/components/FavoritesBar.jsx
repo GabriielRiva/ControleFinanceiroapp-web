@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { addFavorite } from '../services/favoriteService';
 import { formatCurrency } from '../utils/format';
-import { categoryIcon } from '../utils/categories';
+
 
 // sugere lançamentos frequentes ainda não favoritados
 function buildSuggestions(transactions, type, savedKeys) {
@@ -28,7 +28,7 @@ function buildSuggestions(transactions, type, savedKeys) {
 }
 
 export default function FavoritesBar({ type, onUse, onManage }) {
-  const { transactions, favorites } = useData();
+  const { transactions, favorites, categoryIcon } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
 

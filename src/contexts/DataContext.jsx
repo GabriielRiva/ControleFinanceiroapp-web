@@ -7,6 +7,10 @@ import { subscribeRecurring, generateDueRecurring } from '../services/recurringS
 import { subscribeCards } from '../services/cardService';
 import { subscribeFavorites } from '../services/favoriteService';
 import { subscribeBudgets } from '../services/budgetService';
+import { subscribeCategories } from '../services/categoryService';
+import {
+  EXPENSE_CATEGORIES, INCOME_CATEGORIES, DEFAULT_ICONS,
+} from '../utils/categories';
 import { currentMonthKey, monthKey } from '../utils/format';
 
 const DataContext = createContext(null);
@@ -21,6 +25,7 @@ export function DataProvider({ children }) {
   const [cards, setCards] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
   const generatedRef = useRef(false);
@@ -35,6 +40,7 @@ export function DataProvider({ children }) {
       setCards([]);
       setFavorites([]);
       setBudgets([]);
+      setCategories([]);
       setLoading(false);
       generatedRef.current = false;
       return;
@@ -82,8 +88,9 @@ export function DataProvider({ children }) {
     const unsubC = subscribeCards(user.uid, (list) => setCards(list), () => {});
     const unsubF = subscribeFavorites(user.uid, (list) => setFavorites(list), () => {});
     const unsubB = subscribeBudgets(user.uid, (list) => setBudgets(list), () => {});
+    const unsubCat = subscribeCategories(user.uid, (list) => setCategories(list), () => {});
 
-    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubF(); unsubB(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubF(); unsubB(); unsubCat(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -149,11 +156,33 @@ export function DataProvider({ children }) {
     return { items, totalLimit, totalSpent, totalPct, overCount };
   }, [transactions, budgets]);
 
+  // Categorias: padrão + personalizadas (separadas por tipo)
+  const categoryData = useMemo(() => {
+    const customExpense = categories.filter((c) => c.type === 'expense');
+    const customIncome = categories.filter((c) => c.type === 'income');
+
+    const dedupe = (defaults, custom) => {
+      const seen = new Set(defaults.map((n) => n.toLowerCase()));
+      const extra = custom.map((c) => c.name).filter((n) => !seen.has(n.toLowerCase()));
+      return [...defaults, ...extra];
+    };
+
+    const iconMap = { ...DEFAULT_ICONS };
+    categories.forEach((c) => { iconMap[c.name] = c.icon || '✨'; });
+
+    return {
+      expenseCategoryNames: dedupe(EXPENSE_CATEGORIES, customExpense),
+      incomeCategoryNames: dedupe(INCOME_CATEGORIES, customIncome),
+      categoryIcon: (name) => iconMap[name] || '✨',
+    };
+  }, [categories]);
+
   return (
     <DataContext.Provider
       value={{
-        transactions, goals, investments, snapshots, recurring, cards, favorites, budgets,
+        transactions, goals, investments, snapshots, recurring, cards, favorites, budgets, categories,
         loading, indexError, summary, portfolio, budgetStatus,
+        ...categoryData,
       }}
     >
       {children}

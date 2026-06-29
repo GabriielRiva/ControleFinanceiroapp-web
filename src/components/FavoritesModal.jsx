@@ -6,15 +6,13 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { addFavorite, deleteFavorite } from '../services/favoriteService';
-import {
-  INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryIcon,
-} from '../utils/categories';
+import { PAYMENT_METHODS } from '../utils/categories';
 import { formatCurrency } from '../utils/format';
 
 export default function FavoritesModal({ type, onClose }) {
   const isIncome = type === 'income';
-  const cats = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-  const { favorites } = useData();
+  const { favorites, expenseCategoryNames, incomeCategoryNames, categoryIcon } = useData();
+  const cats = isIncome ? incomeCategoryNames : expenseCategoryNames;
   const { user } = useAuth();
   const { notify } = useToast();
 

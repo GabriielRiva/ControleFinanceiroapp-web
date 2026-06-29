@@ -750,3 +750,21 @@ button {
   flex-shrink: 0;
   accent-color: var(--brand);
 }
+
+/* seletor de emoji nas categorias */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.emoji-pick {
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 1.25rem;
+  display: grid; place-items: center;
+  transition: all 0.1s ease;
+}
+.emoji-pick:hover { border-color: var(--brand); }
+.emoji-pick.active { border-color: var(--brand); background: var(--brand-soft); transform: scale(1.05); }

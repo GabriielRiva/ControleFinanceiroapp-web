@@ -8,11 +8,10 @@ import { useToast } from '../contexts/ToastContext';
 import {
   addRecurring, updateRecurring, setRecurringActive, deleteRecurring, generateDueRecurring,
 } from '../services/recurringService';
-import { EXPENSE_CATEGORIES, categoryIcon } from '../utils/categories';
 import { formatCurrency } from '../utils/format';
 
 export default function RecurringModal({ onClose }) {
-  const { recurring } = useData();
+  const { recurring, expenseCategoryNames, categoryIcon } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
 
@@ -150,7 +149,7 @@ export default function RecurringModal({ onClose }) {
           <div className="field" style={{ marginBottom: 12 }}>
             <label className="label">Categoria</label>
             <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {expenseCategoryNames.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           {error && <p className="expense" style={{ marginBottom: 12, fontSize: '0.85rem' }}>{error}</p>}

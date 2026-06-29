@@ -6,7 +6,7 @@ import {
 import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, MONTH_SHORT, greeting, daysUntil } from '../utils/format';
+import { formatCurrency, MONTH_SHORT, MONTH_NAMES, greeting, daysUntil } from '../utils/format';
 import BudgetSummary from '../components/BudgetSummary';
 
 function lastMonths(transactions, count = 6) {
@@ -65,31 +65,33 @@ export default function Dashboard() {
       {/* HERO — assinatura do painel */}
       <div className="balance-hero" style={{ marginBottom: 16 }}>
         <div className="ledger-line" />
-        <div className="label">Saldo atual</div>
-        <div className="big">{formatCurrency(summary.balance)}</div>
+        <div className="label">Saldo do mês · {MONTH_NAMES[new Date().getMonth()]}</div>
+        <div className="big">{formatCurrency(summary.monthBalance)}</div>
         <div className="row gap" style={{ gap: 18, marginTop: 14, flexWrap: 'wrap' }}>
           <span className="row gap-sm" style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.88rem' }}>
-            <TrendingUp size={16} /> {formatCurrency(summary.monthIncome)} este mês
+            <TrendingUp size={16} /> {formatCurrency(summary.monthIncome)} entraram
           </span>
           <span className="row gap-sm" style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.88rem' }}>
-            <TrendingDown size={16} /> {formatCurrency(summary.monthExpense)} este mês
+            <TrendingDown size={16} /> {formatCurrency(summary.monthExpense)} saíram
           </span>
         </div>
       </div>
 
-      {/* STATS */}
+      {/* STATS — do mês atual */}
       <div className="stat-grid" style={{ marginBottom: 22 }}>
         <Link to="/receitas" className="card stat stat-link">
-          <div className="cap"><Wallet size={15} /> Receitas (total)</div>
-          <div className="val income">{formatCurrency(summary.income)}</div>
+          <div className="cap"><Wallet size={15} /> Receitas (mês)</div>
+          <div className="val income">{formatCurrency(summary.monthIncome)}</div>
         </Link>
         <Link to="/despesas" className="card stat stat-link">
-          <div className="cap"><TrendingDown size={15} /> Despesas (total)</div>
-          <div className="val expense">{formatCurrency(summary.expense)}</div>
+          <div className="cap"><TrendingDown size={15} /> Despesas (mês)</div>
+          <div className="val expense">{formatCurrency(summary.monthExpense)}</div>
         </Link>
         <Link to="/relatorios" className="card stat stat-link">
-          <div className="cap"><PiggyBank size={15} /> Economizado</div>
-          <div className="val" style={{ color: 'var(--brand-strong)' }}>{formatCurrency(summary.savings)}</div>
+          <div className="cap"><PiggyBank size={15} /> Economizado (mês)</div>
+          <div className="val" style={{ color: 'var(--brand-strong)' }}>
+            {formatCurrency(Math.max(summary.monthBalance, 0))}
+          </div>
         </Link>
       </div>
 

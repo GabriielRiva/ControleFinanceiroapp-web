@@ -17,10 +17,12 @@ export default function TransactionModal({ type, initial, isEdit, onSave, onClos
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod || PAYMENT_METHODS[1]);
   const [cardId, setCardId] = useState(initial?.cardId || '');
   const [installments, setInstallments] = useState(1);
+  const [applyToGroup, setApplyToGroup] = useState(false);
   const [error, setError] = useState('');
 
   const isCredit = !isIncome && paymentMethod === 'Cartão de crédito';
   const showInstallments = isCredit && !isEdit; // só ao criar nova despesa
+  const isInstallmentEdit = isEdit && initial?.installmentGroup && initial?.installmentTotal > 1;
 
   const submit = () => {
     const value = amount;
@@ -36,6 +38,7 @@ export default function TransactionModal({ type, initial, isEdit, onSave, onClos
       paymentMethod: isIncome ? null : paymentMethod,
       cardId: isCredit ? (cardId || null) : null,
       installments: showInstallments ? Number(installments) : 1,
+      applyToGroup: isInstallmentEdit ? applyToGroup : false,
     });
   };
 
@@ -143,6 +146,20 @@ export default function TransactionModal({ type, initial, isEdit, onSave, onClos
         <label className="label">Data</label>
         <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
+
+      {isInstallmentEdit && (
+        <label className="check-row" style={{ marginTop: 16 }}>
+          <input
+            type="checkbox"
+            checked={applyToGroup}
+            onChange={(e) => setApplyToGroup(e.target.checked)}
+          />
+          <span>
+            Aplicar a <strong>todas as {initial.installmentTotal} parcelas</strong> (categoria, forma de
+            pagamento e descrição). Valor e datas de cada parcela são mantidos.
+          </span>
+        </label>
+      )}
 
       {error && <p className="expense" style={{ marginTop: 14, fontSize: '0.88rem' }}>{error}</p>}
     </Modal>

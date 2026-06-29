@@ -1,6 +1,11 @@
+import { useState } from 'react';
 import Modal from './Modal';
 
-export default function ConfirmDialog({ title, message, confirmLabel = 'Excluir', onConfirm, onClose }) {
+export default function ConfirmDialog({
+  title, message, confirmLabel = 'Excluir', checkboxLabel, onConfirm, onClose,
+}) {
+  const [checked, setChecked] = useState(false);
+
   return (
     <Modal
       title={title}
@@ -14,7 +19,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Excluir'
             className="btn btn-danger grow"
             style={{ background: 'var(--expense)', color: '#fff', borderColor: 'var(--expense)' }}
             onClick={() => {
-              onConfirm();
+              onConfirm(checked);
               onClose();
             }}
           >
@@ -24,6 +29,12 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Excluir'
       }
     >
       <p className="muted" style={{ lineHeight: 1.6 }}>{message}</p>
+      {checkboxLabel && (
+        <label className="check-row" style={{ marginTop: 16 }}>
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+          <span>{checkboxLabel}</span>
+        </label>
+      )}
     </Modal>
   );
 }

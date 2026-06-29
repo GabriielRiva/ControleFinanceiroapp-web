@@ -92,3 +92,24 @@ export async function updateTransaction(id, data) {
 export async function deleteTransaction(id) {
   return deleteDoc(doc(db, 'transactions', id));
 }
+
+// Recria um lançamento (usado pelo "Desfazer"), preservando os campos.
+export async function restoreTransaction(uid, data) {
+  const payload = {
+    userId: uid,
+    type: data.type,
+    description: data.description,
+    amount: Number(data.amount),
+    category: data.category,
+    date: data.date,
+    paymentMethod: data.paymentMethod || null,
+    cardId: data.cardId || null,
+    createdAt: serverTimestamp(),
+  };
+  if (data.installmentGroup) {
+    payload.installmentGroup = data.installmentGroup;
+    payload.installmentIndex = data.installmentIndex || null;
+    payload.installmentTotal = data.installmentTotal || null;
+  }
+  return addDoc(col, payload);
+}

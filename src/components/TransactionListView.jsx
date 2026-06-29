@@ -4,7 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  addTransaction, addInstallments, updateTransaction, deleteTransaction,
+  addTransaction, addInstallments, updateTransaction, deleteTransaction, restoreTransaction,
 } from '../services/transactionService';
 import { formatCurrency, formatDate } from '../utils/format';
 import { categoryIcon } from '../utils/categories';
@@ -79,7 +79,24 @@ export default function TransactionListView({ type }) {
     try {
       if (modal?.edit) {
         await updateTransaction(modal.edit.id, data);
-        notify('Lançamento atualizado.');
+        // aplicar a todas as parcelas do grupo (campos compartilhados)
+        if (data.applyToGroup && modal.edit.installmentGroup) {
+          const base = (data.description || '').replace(/\s*\(\d+\/\d+\)\s*$/, '');
+          const group = transactions.filter((t) => t.installmentGroup === modal.edit.installmentGroup);
+          await Promise.all(group.map((t) => updateTransaction(t.id, {
+            description: t.installmentIndex && t.installmentTotal
+              ? `${base} (${t.installmentIndex}/${t.installmentTotal})`
+              : base,
+            amount: t.amount,
+            category: data.category,
+            date: t.date,
+            paymentMethod: data.paymentMethod,
+            cardId: data.cardId,
+          })));
+          notify('Todas as parcelas foram atualizadas.');
+        } else {
+          notify('Lançamento atualizado.');
+        }
       } else if (data.installments && data.installments > 1) {
         await addInstallments(user.uid, data, data.installments);
         notify(`Compra parcelada em ${data.installments}x criada.`);
@@ -95,10 +112,29 @@ export default function TransactionListView({ type }) {
     }
   };
 
-  const handleDelete = async (tx) => {
+  // exclusão com opção de desfazer
+  const handleDelete = async (tx, deleteGroup) => {
     try {
-      await deleteTransaction(tx.id);
-      notify('Lançamento excluído.');
+      if (deleteGroup && tx.installmentGroup) {
+        const group = transactions.filter((t) => t.installmentGroup === tx.installmentGroup);
+        const backup = group.map((t) => ({ ...t }));
+        await Promise.all(group.map((t) => deleteTransaction(t.id)));
+        notify(`${group.length} parcelas excluídas.`, 'ok', {
+          label: 'Desfazer',
+          onClick: () => Promise.all(backup.map((b) => restoreTransaction(user.uid, b)))
+            .then(() => notify('Parcelas restauradas.'))
+            .catch(() => notify('Não foi possível desfazer.', 'err')),
+        });
+      } else {
+        const backup = { ...tx };
+        await deleteTransaction(tx.id);
+        notify('Lançamento excluído.', 'ok', {
+          label: 'Desfazer',
+          onClick: () => restoreTransaction(user.uid, backup)
+            .then(() => notify('Lançamento restaurado.'))
+            .catch(() => notify('Não foi possível desfazer.', 'err')),
+        });
+      }
     } catch {
       notify('Não foi possível excluir.', 'err');
     }
@@ -201,11 +237,26 @@ export default function TransactionListView({ type }) {
             {loading ? (
               <div className="empty"><div className="spinner" style={{ margin: '0 auto' }} /></div>
             ) : items.length === 0 ? (
-              <div className="empty">
-                <div className="emoji">{isIncome ? '💰' : '🧾'}</div>
-                <div className="t">{filtered ? 'Nada encontrado' : isIncome ? 'Nenhuma receita ainda' : 'Nenhuma despesa ainda'}</div>
-                <p>{filtered ? 'Tente ajustar a busca ou os filtros.' : 'Toque em Adicionar para registrar o primeiro lançamento.'}</p>
-              </div>
+              filtered ? (
+                <div className="empty">
+                  <div className="emoji">🔍</div>
+                  <div className="t">Nada encontrado</div>
+                  <p>Tente ajustar a busca ou os filtros.</p>
+                </div>
+              ) : (
+                <div className="empty">
+                  <div className="emoji">{isIncome ? '💰' : '🧾'}</div>
+                  <div className="t">{isIncome ? 'Bora registrar o que entra!' : 'Bora registrar seus gastos!'}</div>
+                  <p style={{ maxWidth: 320, margin: '0 auto 16px' }}>
+                    {isIncome
+                      ? 'Adicione seu salário, freelances e outras entradas para acompanhar quanto você recebe.'
+                      : 'Adicione suas compras e contas para ver pra onde seu dinheiro está indo.'}
+                  </p>
+                  <button className="btn btn-primary" onClick={() => setModal({})}>
+                    <Plus size={18} /> {isIncome ? 'Adicionar primeira receita' : 'Adicionar primeira despesa'}
+                  </button>
+                </div>
+              )
             ) : (
               items.map((t) => (
                 <div className="list-item" key={t.id}>
@@ -248,8 +299,17 @@ export default function TransactionListView({ type }) {
       {confirm && (
         <ConfirmDialog
           title="Excluir lançamento"
-          message={`Tem certeza que deseja excluir "${confirm.description}"? Essa ação não pode ser desfeita.`}
-          onConfirm={() => handleDelete(confirm)}
+          message={
+            confirm.installmentGroup && confirm.installmentTotal > 1
+              ? `Excluir "${confirm.description}"? Você pode excluir só esta parcela ou todas as ${confirm.installmentTotal}.`
+              : `Tem certeza que deseja excluir "${confirm.description}"?`
+          }
+          checkboxLabel={
+            confirm.installmentGroup && confirm.installmentTotal > 1
+              ? `Excluir todas as ${confirm.installmentTotal} parcelas`
+              : undefined
+          }
+          onConfirm={(checked) => handleDelete(confirm, checked)}
           onClose={() => setConfirm(null)}
         />
       )}

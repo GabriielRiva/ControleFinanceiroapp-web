@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Plus, Trash2, Pause, Play } from 'lucide-react';
+import { Plus, Trash2, Pause, Play, Pencil } from 'lucide-react';
 import Modal from './Modal';
 import CurrencyInput from './CurrencyInput';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
-  addRecurring, setRecurringActive, deleteRecurring, generateDueRecurring,
+  addRecurring, updateRecurring, setRecurringActive, deleteRecurring, generateDueRecurring,
 } from '../services/recurringService';
 import { EXPENSE_CATEGORIES, categoryIcon } from '../utils/categories';
 import { formatCurrency } from '../utils/format';
@@ -17,12 +17,28 @@ export default function RecurringModal({ onClose }) {
   const { notify } = useToast();
 
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState(0);
   const [category, setCategory] = useState('Moradia');
   const [dayOfMonth, setDayOfMonth] = useState('5');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setDescription(r.description);
+    setAmount(Number(r.amount) || 0);
+    setCategory(r.category);
+    setDayOfMonth(String(r.dayOfMonth));
+    setError('');
+    setAdding(true);
+  };
+
+  const resetForm = () => {
+    setDescription(''); setAmount(0); setCategory('Moradia'); setDayOfMonth('5');
+    setEditingId(null); setAdding(false); setError('');
+  };
 
   const submit = async () => {
     const value = amount;
@@ -31,22 +47,30 @@ export default function RecurringModal({ onClose }) {
     setError('');
     setSaving(true);
     try {
-      const ref = await addRecurring(user.uid, {
-        description: description.trim(),
-        amount: value,
-        category,
-        dayOfMonth: Number(dayOfMonth) || 1,
-      });
-      // lança imediatamente o(s) mês(es) pendente(s) desta nova conta
-      await generateDueRecurring(user.uid, [{
-        id: ref.id, active: true, description: description.trim(),
-        amount: value, category, dayOfMonth: Number(dayOfMonth) || 1,
-        startMonth: undefined, lastPosted: '',
-      }]);
-      notify('Conta fixa criada e lançada neste mês.');
-      setDescription(''); setAmount(0); setDayOfMonth('5'); setAdding(false);
+      if (editingId) {
+        await updateRecurring(editingId, {
+          description: description.trim(), amount: value,
+          category, dayOfMonth: Number(dayOfMonth) || 1,
+        });
+        notify('Conta fixa atualizada. (Vale para os próximos meses.)');
+      } else {
+        const ref = await addRecurring(user.uid, {
+          description: description.trim(),
+          amount: value,
+          category,
+          dayOfMonth: Number(dayOfMonth) || 1,
+        });
+        // lança imediatamente o(s) mês(es) pendente(s) desta nova conta
+        await generateDueRecurring(user.uid, [{
+          id: ref.id, active: true, description: description.trim(),
+          amount: value, category, dayOfMonth: Number(dayOfMonth) || 1,
+          startMonth: undefined, lastPosted: '',
+        }]);
+        notify('Conta fixa criada e lançada neste mês.');
+      }
+      resetForm();
     } catch {
-      notify('Não foi possível criar.', 'err');
+      notify('Não foi possível salvar.', 'err');
     } finally {
       setSaving(false);
     }
@@ -92,6 +116,9 @@ export default function RecurringModal({ onClose }) {
                 </div>
               </div>
               <div className="row gap-sm">
+                <button className="mini-btn" onClick={() => openEdit(r)} aria-label="Editar">
+                  <Pencil size={15} />
+                </button>
                 <button className="mini-btn" onClick={() => toggle(r)} aria-label={r.active ? 'Pausar' : 'Reativar'}>
                   {r.active ? <Pause size={15} /> : <Play size={15} />}
                 </button>
@@ -128,9 +155,9 @@ export default function RecurringModal({ onClose }) {
           </div>
           {error && <p className="expense" style={{ marginBottom: 12, fontSize: '0.85rem' }}>{error}</p>}
           <div className="row gap">
-            <button className="btn btn-ghost grow" onClick={() => { setAdding(false); setError(''); }}>Cancelar</button>
+            <button className="btn btn-ghost grow" onClick={resetForm}>Cancelar</button>
             <button className="btn btn-primary grow" onClick={submit} disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar conta'}
+              {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Salvar conta'}
             </button>
           </div>
         </div>

@@ -230,8 +230,14 @@ export default function Investments() {
       {investments.length === 0 ? (
         <div className="card empty">
           <div className="emoji">📈</div>
-          <div className="t">Nenhum investimento ainda</div>
-          <p>Adicione suas posições (Renda Fixa, Fundos…) e acompanhe quanto rendem.</p>
+          <div className="t">Acompanhe seus investimentos</div>
+          <p style={{ maxWidth: 330, margin: '0 auto 16px' }}>
+            Cadastre suas posições (Renda Fixa, Fundos…), informe o valor atual e veja quanto rendem
+            ao longo do tempo.
+          </p>
+          <button className="btn btn-primary" onClick={() => setModal({})}>
+            <Plus size={18} /> Adicionar investimento
+          </button>
         </div>
       ) : (
         <div className="col gap">

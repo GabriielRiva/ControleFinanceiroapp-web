@@ -80,8 +80,14 @@ export default function Goals() {
       ) : goals.length === 0 ? (
         <div className="card empty">
           <div className="emoji">🎯</div>
-          <div className="t">Nenhuma meta ainda</div>
-          <p>Defina objetivos como uma reserva de emergência ou uma viagem, e acompanhe o progresso.</p>
+          <div className="t">Defina seu primeiro objetivo</div>
+          <p style={{ maxWidth: 320, margin: '0 auto 16px' }}>
+            Reserva de emergência, uma viagem, um celular novo… crie uma meta e acompanhe o progresso
+            até lá.
+          </p>
+          <button className="btn btn-primary" onClick={() => setModal({})}>
+            <Plus size={18} /> Criar primeira meta
+          </button>
         </div>
       ) : (
         <div className="col gap">

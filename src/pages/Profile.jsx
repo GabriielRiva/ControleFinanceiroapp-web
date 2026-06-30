@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Download, LogOut, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, LogOut, Moon, Landmark } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { exportTransactionsToCsv } from '../utils/csv';
 import { formatCurrency } from '../utils/format';
+import { setInitialBalance } from '../services/profileService';
+import CurrencyInput from '../components/CurrencyInput';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Profile() {
@@ -14,6 +16,25 @@ export default function Profile() {
   const { isDark, toggleTheme } = useTheme();
   const { notify } = useToast();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [initialBalanceInput, setInitialBalanceInput] = useState(summary.initialBalance || 0);
+  const [initialDate, setInitialDate] = useState('');
+  const [savingInit, setSavingInit] = useState(false);
+
+  useEffect(() => {
+    setInitialBalanceInput(summary.initialBalance || 0);
+  }, [summary.initialBalance]);
+
+  const handleSaveInitial = async () => {
+    setSavingInit(true);
+    try {
+      await setInitialBalance(user.uid, initialBalanceInput, initialDate || null);
+      notify('Saldo inicial salvo.');
+    } catch {
+      notify('Não foi possível salvar o saldo inicial.', 'err');
+    } finally {
+      setSavingInit(false);
+    }
+  };
 
   const name = profile?.name || user?.displayName || 'Usuário';
   const initials = name
@@ -68,6 +89,35 @@ export default function Profile() {
           <div className="cap">Economizado</div>
           <div className="val" style={{ color: 'var(--brand-strong)' }}>{formatCurrency(summary.savings)}</div>
         </div>
+      </div>
+
+      {/* saldo da conta */}
+      <h2 className="section-title">Saldo da conta</h2>
+      <div className="card card-pad" style={{ marginBottom: 22 }}>
+        <div className="between" style={{ marginBottom: 14 }}>
+          <span className="row gap-sm" style={{ fontWeight: 600 }}>
+            <Landmark size={17} /> Saldo atual em conta
+          </span>
+          <span className="num" style={{ fontWeight: 700, fontSize: '1.15rem', color: summary.realBalance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+            {formatCurrency(summary.realBalance)}
+          </span>
+        </div>
+        <p className="muted" style={{ fontSize: '0.82rem', lineHeight: 1.6, marginBottom: 14 }}>
+          É o saldo inicial + tudo que entrou − tudo que saiu. Informe abaixo quanto você tinha no
+          banco quando começou a usar o app, para o saldo bater com o extrato.
+        </p>
+
+        <div className="field">
+          <label className="label">Saldo inicial (R$)</label>
+          <CurrencyInput value={initialBalanceInput} onChange={setInitialBalanceInput} />
+        </div>
+        <div className="field" style={{ marginBottom: 14 }}>
+          <label className="label">Data do saldo inicial (opcional)</label>
+          <input className="input" type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
+        </div>
+        <button className="btn btn-primary btn-block" onClick={handleSaveInitial} disabled={savingInit}>
+          {savingInit ? 'Salvando…' : 'Salvar saldo inicial'}
+        </button>
       </div>
 
       {/* preferências */}

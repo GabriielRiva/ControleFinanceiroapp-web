@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart, Landmark } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, MONTH_SHORT, MONTH_NAMES, greeting, daysUntil } from '../utils/format';
@@ -74,6 +74,15 @@ export default function Dashboard() {
           <span className="row gap-sm" style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.88rem' }}>
             <TrendingDown size={16} /> {formatCurrency(summary.monthExpense)} saíram
           </span>
+        </div>
+        <div
+          className="row gap-sm"
+          style={{
+            marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)',
+            color: 'rgba(255,255,255,0.95)', fontSize: '0.9rem', fontWeight: 600,
+          }}
+        >
+          <Landmark size={16} /> Saldo em conta: {formatCurrency(summary.realBalance)}
         </div>
       </div>
 

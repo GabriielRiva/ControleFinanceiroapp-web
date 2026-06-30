@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  Plus, Pencil, Trash2, TrendingUp, CalendarPlus, Wallet, ArrowUpRight,
+  Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,8 +12,9 @@ import { useToast } from '../contexts/ToastContext';
 import {
   addInvestment, updateInvestment, deleteInvestment, saveSnapshot,
 } from '../services/investmentService';
+import { addTransaction } from '../services/transactionService';
 import {
-  formatCurrency, currentMonthKey, monthLabelFromKey,
+  formatCurrency, currentMonthKey, monthLabelFromKey, todayISO,
 } from '../utils/format';
 import { colorByIndex } from '../utils/categories';
 import InvestmentModal from '../components/InvestmentModal';
@@ -29,6 +30,7 @@ export default function Investments() {
   const [aporte, setAporte] = useState(null);    // position
   const [updateBal, setUpdateBal] = useState(null); // position
   const [confirm, setConfirm] = useState(null);  // position
+  const [allocView, setAllocView] = useState('class'); // 'class' | 'asset'
   const [saving, setSaving] = useState(false);
 
   const allocation = useMemo(
@@ -38,12 +40,34 @@ export default function Investments() {
     [investments]
   );
 
-  // cor própria e estável para cada investimento (por ordem na lista)
-  const colorMap = useMemo(() => {
+  // divisão por classe de ativo
+  const allocationByClass = useMemo(() => {
     const m = {};
-    investments.forEach((p, i) => { m[p.name] = colorByIndex(i); });
-    return m;
+    for (const p of investments) {
+      const v = Number(p.currentValue) || 0;
+      if (v <= 0) continue;
+      const cls = p.assetClass || 'Outros';
+      m[cls] = (m[cls] || 0) + v;
+    }
+    return Object.entries(m)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [investments]);
+
+  // rentabilidade do mês (desconta aportes feitos desde o último registro)
+  const monthlyReturn = useMemo(() => {
+    if (snapshots.length === 0) return null;
+    const mk = currentMonthKey();
+    const sorted = [...snapshots].sort((a, b) => (a.date < b.date ? -1 : 1));
+    // último registro anterior ao mês atual
+    const prev = [...sorted].reverse().find((s) => s.date < mk) || null;
+    if (!prev) return null;
+    const aportesMes = Math.max(0, portfolio.invested - (Number(prev.totalInvested) || 0));
+    const rend = (portfolio.current - (Number(prev.totalValue) || 0)) - aportesMes;
+    const base = Number(prev.totalValue) || 0;
+    const pct = base > 0 ? (rend / base) * 100 : 0;
+    return { rend, pct, fromLabel: monthLabelFromKey(prev.date) };
+  }, [snapshots, portfolio]);
 
   const evolution = useMemo(
     () => snapshots.map((s) => ({
@@ -73,15 +97,29 @@ export default function Investments() {
     }
   };
 
-  const handleAporte = async (amount) => {
+  const handleAporte = async (amount, opts = {}) => {
     setSaving(true);
     try {
       await updateInvestment(aporte.id, {
         name: aporte.name,
+        assetClass: aporte.assetClass,
         invested: (Number(aporte.invested) || 0) + amount,
         currentValue: (Number(aporte.currentValue) || 0) + amount,
       });
-      notify('Aporte registrado.');
+      // descontar do saldo: cria uma despesa equivalente
+      if (opts.checked) {
+        await addTransaction(user.uid, {
+          type: 'expense',
+          description: `Aporte: ${aporte.name}`,
+          amount,
+          category: 'Investimentos',
+          date: todayISO(),
+          paymentMethod: 'Pix',
+        });
+        notify('Aporte registrado e descontado do saldo.');
+      } else {
+        notify('Aporte registrado.');
+      }
       setAporte(null);
     } catch {
       notify('Não foi possível registrar o aporte.', 'err');
@@ -95,6 +133,7 @@ export default function Investments() {
     try {
       await updateInvestment(updateBal.id, {
         name: updateBal.name,
+        assetClass: updateBal.assetClass,
         invested: Number(updateBal.invested) || 0,
         currentValue: newValue,
       });
@@ -142,9 +181,21 @@ export default function Investments() {
           </span>
           <span className="row gap-sm" style={{ color: 'rgba(255,255,255,0.95)', fontSize: '0.88rem', fontWeight: 600 }}>
             <ArrowUpRight size={16} />
-            {portfolio.profit >= 0 ? '+' : ''}{formatCurrency(portfolio.profit)} ({portfolio.profitPct.toFixed(2)}%)
+            {portfolio.profit >= 0 ? '+' : ''}{formatCurrency(portfolio.profit)} ({portfolio.profitPct.toFixed(2)}%) no total
           </span>
         </div>
+        {monthlyReturn && (
+          <div
+            className="row gap-sm"
+            style={{
+              marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)',
+              color: 'rgba(255,255,255,0.95)', fontSize: '0.9rem', fontWeight: 600,
+            }}
+          >
+            {monthlyReturn.rend >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+            Este mês: {monthlyReturn.rend >= 0 ? '+' : ''}{formatCurrency(monthlyReturn.rend)} ({monthlyReturn.pct.toFixed(2)}%)
+          </div>
+        )}
       </div>
 
       <div className="between" style={{ marginBottom: 18 }}>
@@ -190,37 +241,50 @@ export default function Investments() {
       {/* divisão da carteira */}
       {allocation.length > 0 && (
         <>
-          <h2 className="section-title">Divisão da carteira</h2>
-          <div className="card card-pad" style={{ marginBottom: 22 }}>
-            <div className="row gap-lg wrap" style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 200, height: 200 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={allocation} dataKey="value" nameKey="name" innerRadius={54} outerRadius={88} paddingAngle={2} stroke="none">
-                      {allocation.map((e) => <Cell key={e.name} fill={colorMap[e.name]} />)}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v) => formatCurrency(v)}
-                      contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 13, color: 'var(--text)' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="col gap-sm grow" style={{ minWidth: 180 }}>
-                {allocation.map((c) => {
-                  const pct = portfolio.current > 0 ? Math.round((c.value / portfolio.current) * 100) : 0;
-                  return (
-                    <div className="between" key={c.name} style={{ gap: 12 }}>
-                      <span className="row gap-sm">
-                        <i style={{ width: 11, height: 11, borderRadius: 3, background: colorMap[c.name] }} />
-                        {c.name}
-                      </span>
-                      <span className="num muted" style={{ fontWeight: 600 }}>{pct}%</span>
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="between" style={{ marginBottom: 14 }}>
+            <h2 className="section-title" style={{ margin: 0 }}>Divisão da carteira</h2>
+            <div className="row gap-sm">
+              <button className={`chip ${allocView === 'class' ? 'active' : ''}`} onClick={() => setAllocView('class')}>Por classe</button>
+              <button className={`chip ${allocView === 'asset' ? 'active' : ''}`} onClick={() => setAllocView('asset')}>Por ativo</button>
             </div>
+          </div>
+          <div className="card card-pad" style={{ marginBottom: 22 }}>
+            {(() => {
+              const data = allocView === 'class' ? allocationByClass : allocation;
+              return (
+                <div className="row gap-lg wrap" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 200, height: 200 }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie data={data} dataKey="value" nameKey="name" innerRadius={54} outerRadius={88} paddingAngle={2} stroke="none">
+                          {data.map((e, i) => <Cell key={e.name} fill={colorByIndex(i)} />)}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v) => formatCurrency(v)}
+                          contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 13, color: 'var(--text)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="col gap-sm grow" style={{ minWidth: 180 }}>
+                    {data.map((c, i) => {
+                      const pct = portfolio.current > 0 ? Math.round((c.value / portfolio.current) * 100) : 0;
+                      return (
+                        <div className="between" key={c.name} style={{ gap: 12 }}>
+                          <span className="row gap-sm">
+                            <i style={{ width: 11, height: 11, borderRadius: 3, background: colorByIndex(i) }} />
+                            {c.name}
+                          </span>
+                          <span className="num muted" style={{ fontWeight: 600 }}>
+                            {formatCurrency(c.value)} · {pct}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
@@ -252,8 +316,13 @@ export default function Investments() {
                 <div className="goal-top">
                   <div>
                     <div className="goal-name">{p.name}</div>
-                    <div className="muted" style={{ fontSize: '0.82rem', marginTop: 3 }}>
-                      Aportado: {formatCurrency(inv)}
+                    <div className="row gap-sm" style={{ marginTop: 3, alignItems: 'center' }}>
+                      <span className="pill" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+                        {p.assetClass || 'Outros'}
+                      </span>
+                      <span className="muted" style={{ fontSize: '0.82rem' }}>
+                        Aportado: {formatCurrency(inv)}
+                      </span>
                     </div>
                   </div>
                   <div className="col" style={{ alignItems: 'flex-end' }}>
@@ -296,6 +365,7 @@ export default function Investments() {
           label="Quanto você investiu agora? (R$)"
           hint="Esse valor entra no total aportado e no valor atual."
           cta="Registrar aporte"
+          checkboxLabel="Descontar do meu saldo (lançar como despesa em Investimentos)"
           saving={saving}
           onConfirm={handleAporte}
           onClose={() => setAporte(null)}

@@ -8,6 +8,7 @@ import { subscribeCards } from '../services/cardService';
 import { subscribeFavorites } from '../services/favoriteService';
 import { subscribeBudgets } from '../services/budgetService';
 import { subscribeCategories } from '../services/categoryService';
+import { subscribeUserDoc } from '../services/profileService';
 import {
   EXPENSE_CATEGORIES, INCOME_CATEGORIES, DEFAULT_ICONS,
 } from '../utils/categories';
@@ -26,6 +27,7 @@ export function DataProvider({ children }) {
   const [favorites, setFavorites] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [initialBalance, setInitialBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
   const generatedRef = useRef(false);
@@ -41,6 +43,7 @@ export function DataProvider({ children }) {
       setFavorites([]);
       setBudgets([]);
       setCategories([]);
+      setInitialBalance(0);
       setLoading(false);
       generatedRef.current = false;
       return;
@@ -89,8 +92,9 @@ export function DataProvider({ children }) {
     const unsubF = subscribeFavorites(user.uid, (list) => setFavorites(list), () => {});
     const unsubB = subscribeBudgets(user.uid, (list) => setBudgets(list), () => {});
     const unsubCat = subscribeCategories(user.uid, (list) => setCategories(list), () => {});
+    const unsubU = subscribeUserDoc(user.uid, (d) => setInitialBalance(d?.initialBalance || 0), () => {});
 
-    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubF(); unsubB(); unsubCat(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubF(); unsubB(); unsubCat(); unsubU(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -106,16 +110,19 @@ export function DataProvider({ children }) {
         if (monthKey(t.date) === mk) monthExpense += amt;
       }
     }
+    const init = Number(initialBalance) || 0;
     return {
       income,
       expense,
       balance: income - expense,
+      initialBalance: init,
+      realBalance: init + income - expense, // saldo em conta (bate com o banco)
       monthIncome,
       monthExpense,
       monthBalance: monthIncome - monthExpense,
       savings: Math.max(income - expense, 0),
     };
-  }, [transactions]);
+  }, [transactions, initialBalance]);
 
   // Totais da carteira de investimentos
   const portfolio = useMemo(() => {

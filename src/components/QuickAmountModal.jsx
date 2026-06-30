@@ -4,15 +4,18 @@ import CurrencyInput from './CurrencyInput';
 
 // Modal genérico para informar um valor (aporte de metas/investimentos).
 export default function QuickAmountModal({
-  title, label, hint, cta = 'Adicionar', defaultValue, onConfirm, onClose, saving,
+  title, label, hint, cta = 'Adicionar', defaultValue,
+  checkboxLabel, checkboxDefault = false,
+  onConfirm, onClose, saving,
 }) {
   const [amount, setAmount] = useState(Number(defaultValue) || 0);
+  const [checked, setChecked] = useState(checkboxDefault);
   const [error, setError] = useState('');
 
   const submit = () => {
     if (amount <= 0) return setError('Informe um valor maior que zero.');
     setError('');
-    onConfirm(amount);
+    onConfirm(amount, { checked });
   };
 
   return (
@@ -33,6 +36,12 @@ export default function QuickAmountModal({
         <label className="label">{label || 'Valor (R$)'}</label>
         <CurrencyInput value={amount} onChange={setAmount} autoFocus />
       </div>
+      {checkboxLabel && (
+        <label className="check-row" style={{ marginTop: 16 }}>
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+          <span>{checkboxLabel}</span>
+        </label>
+      )}
       {error && <p className="expense" style={{ marginTop: 14, fontSize: '0.88rem' }}>{error}</p>}
     </Modal>
   );

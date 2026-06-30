@@ -7,8 +7,13 @@ const SUGGESTIONS = [
   'Ações', 'FIIs', 'Previdência', 'Cripto', 'Poupança',
 ];
 
+export const ASSET_CLASSES = [
+  'Renda Fixa', 'Ações / FIIs', 'Fundos', 'Cripto', 'Internacional', 'Previdência', 'Outros',
+];
+
 export default function InvestmentModal({ initial, onSave, onClose, saving }) {
   const [name, setName] = useState(initial?.name || '');
+  const [assetClass, setAssetClass] = useState(initial?.assetClass || 'Renda Fixa');
   const [invested, setInvested] = useState(Number(initial?.invested) || 0);
   const [currentValue, setCurrentValue] = useState(Number(initial?.currentValue) || 0);
   const [error, setError] = useState('');
@@ -19,7 +24,7 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
     if (!name.trim()) return setError('Dê um nome para o investimento.');
     if (inv <= 0) return setError('Informe quanto você investiu (aportado).');
     setError('');
-    onSave({ name: name.trim(), invested: inv, currentValue: cur || inv });
+    onSave({ name: name.trim(), assetClass, invested: inv, currentValue: cur || inv });
   };
 
   return (
@@ -48,6 +53,16 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
         <datalist id="invest-suggestions">
           {SUGGESTIONS.map((s) => <option key={s} value={s} />)}
         </datalist>
+      </div>
+
+      <div className="field">
+        <label className="label">Classe do ativo</label>
+        <select className="select" value={assetClass} onChange={(e) => setAssetClass(e.target.value)}>
+          {ASSET_CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="muted" style={{ fontSize: '0.78rem' }}>
+          Usada para mostrar como sua carteira está distribuída.
+        </span>
       </div>
 
       <div className="field">

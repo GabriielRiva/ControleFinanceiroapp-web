@@ -36,6 +36,7 @@ export async function addInvestment(uid, data) {
   return addDoc(investmentsCol, {
     userId: uid,
     name: data.name,
+    assetClass: data.assetClass || "Outros",
     invested: Number(data.invested) || 0,
     currentValue: Number(data.currentValue) || 0,
     createdAt: serverTimestamp(),
@@ -45,6 +46,7 @@ export async function addInvestment(uid, data) {
 export async function updateInvestment(id, data) {
   return updateDoc(doc(db, 'investments', id), {
     name: data.name,
+    assetClass: data.assetClass || "Outros",
     invested: Number(data.invested) || 0,
     currentValue: Number(data.currentValue) || 0,
   });

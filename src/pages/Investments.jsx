@@ -106,11 +106,11 @@ export default function Investments() {
         invested: (Number(aporte.invested) || 0) + amount,
         currentValue: (Number(aporte.currentValue) || 0) + amount,
       });
-      // descontar do saldo: cria uma despesa equivalente
+      // descontar do saldo: registra como APLICAÇÃO (neutra, não é despesa)
       if (opts.checked) {
         await addTransaction(user.uid, {
-          type: 'expense',
-          description: `Aporte: ${aporte.name}`,
+          type: 'application',
+          description: `Aplicação: ${aporte.name}`,
           amount,
           category: 'Investimentos',
           date: todayISO(),

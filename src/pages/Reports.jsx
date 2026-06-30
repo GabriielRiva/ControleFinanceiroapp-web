@@ -26,7 +26,7 @@ export default function Reports() {
       if (k in idx) {
         const b = buckets[idx[k]];
         if (t.type === 'income') b.Receitas += Number(t.amount) || 0;
-        else b.Despesas += Number(t.amount) || 0;
+        else if (t.type === 'expense') b.Despesas += Number(t.amount) || 0;
       }
     }
     return buckets;
@@ -72,7 +72,7 @@ export default function Reports() {
     let income = 0, expense = 0;
     for (const t of filtered) {
       if (t.type === 'income') income += Number(t.amount) || 0;
-      else expense += Number(t.amount) || 0;
+      else if (t.type === 'expense') expense += Number(t.amount) || 0;
     }
     return { income, expense, balance: income - expense };
   }, [filtered]);

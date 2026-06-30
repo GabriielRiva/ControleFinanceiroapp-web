@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart, Tag } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart, Tag, TrendingUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ import ConfirmDialog from './ConfirmDialog';
 import RecurringModal from './RecurringModal';
 import CardsModal from './CardsModal';
 import InvoicesView from './InvoicesView';
+import ApplicationsView from './ApplicationsView';
 import FilterBar, { emptyFilters, isFilterActive } from './FilterBar';
 import FavoritesBar from './FavoritesBar';
 import FavoritesModal from './FavoritesModal';
@@ -205,21 +206,28 @@ export default function TransactionListView({ type }) {
         </div>
       )}
 
-      {/* abas Lançamentos / Faturas (só despesas) */}
+      {/* abas Lançamentos / Faturas / Aplicações (só despesas) */}
       {!isIncome && (
-        <div className="row gap-sm" style={{ marginBottom: 16 }}>
+        <div className="row gap-sm wrap" style={{ marginBottom: 16 }}>
           <button className={`chip ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>
             <FileText size={14} style={{ marginRight: 4 }} /> Lançamentos
           </button>
           <button className={`chip ${tab === 'invoices' ? 'active' : ''}`} onClick={() => setTab('invoices')}>
             <CreditCard size={14} style={{ marginRight: 4 }} /> Faturas
           </button>
+          <button className={`chip ${tab === 'applications' ? 'active' : ''}`} onClick={() => setTab('applications')}>
+            <TrendingUp size={14} style={{ marginRight: 4 }} /> Aplicações
+          </button>
         </div>
+      )}
+
+      {tab === 'applications' && !isIncome && (
+        <ApplicationsView onDelete={handleDelete} categoryIcon={categoryIcon} />
       )}
 
       {tab === 'invoices' && !isIncome ? (
         <InvoicesView />
-      ) : (
+      ) : tab === 'applications' && !isIncome ? null : (
         <>
           {/* busca */}
           <div className="search" style={{ marginBottom: 16 }}>

@@ -100,11 +100,15 @@ export function DataProvider({ children }) {
   const summary = useMemo(() => {
     const mk = currentMonthKey();
     let income = 0, expense = 0, monthIncome = 0, monthExpense = 0;
+    let applications = 0;
     for (const t of transactions) {
       const amt = Number(t.amount) || 0;
       if (t.type === 'income') {
         income += amt;
         if (monthKey(t.date) === mk) monthIncome += amt;
+      } else if (t.type === 'application') {
+        // movimentação neutra: sai da conta, mas NÃO é despesa
+        applications += amt;
       } else {
         expense += amt;
         if (monthKey(t.date) === mk) monthExpense += amt;
@@ -114,9 +118,11 @@ export function DataProvider({ children }) {
     return {
       income,
       expense,
+      applications,
       balance: income - expense,
       initialBalance: init,
-      realBalance: init + income - expense, // saldo em conta (bate com o banco)
+      // saldo em conta (bate com o banco): aplicações saem do caixa
+      realBalance: init + income - expense - applications,
       monthIncome,
       monthExpense,
       monthBalance: monthIncome - monthExpense,

@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight,
+  Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +28,7 @@ export default function Investments() {
 
   const [modal, setModal] = useState(null);      // {edit?}
   const [aporte, setAporte] = useState(null);    // position
+  const [resgate, setResgate] = useState(null);  // position
   const [updateBal, setUpdateBal] = useState(null); // position
   const [confirm, setConfirm] = useState(null);  // position
   const [allocView, setAllocView] = useState('class'); // 'class' | 'asset'
@@ -123,6 +124,39 @@ export default function Investments() {
       setAporte(null);
     } catch {
       notify('Não foi possível registrar o aporte.', 'err');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResgate = async (amount, opts = {}) => {
+    setSaving(true);
+    try {
+      const curVal = Number(resgate.currentValue) || 0;
+      const curInv = Number(resgate.invested) || 0;
+      const take = Math.min(amount, curVal); // não resgata mais que o valor atual
+      await updateInvestment(resgate.id, {
+        name: resgate.name,
+        assetClass: resgate.assetClass,
+        invested: Math.max(0, curInv - take),
+        currentValue: Math.max(0, curVal - take),
+      });
+      if (opts.checked) {
+        await addTransaction(user.uid, {
+          type: 'redemption',
+          description: `Resgate: ${resgate.name}`,
+          amount: take,
+          category: 'Investimentos',
+          date: todayISO(),
+          paymentMethod: 'Pix',
+        });
+        notify('Resgate registrado e creditado no saldo.');
+      } else {
+        notify('Resgate registrado.');
+      }
+      setResgate(null);
+    } catch {
+      notify('Não foi possível registrar o resgate.', 'err');
     } finally {
       setSaving(false);
     }
@@ -337,6 +371,9 @@ export default function Investments() {
                   <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setAporte(p)}>
                     <Plus size={15} /> Aporte
                   </button>
+                  <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setResgate(p)}>
+                    <ArrowDownRight size={15} /> Resgatar
+                  </button>
                   <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setUpdateBal(p)}>
                     Atualizar saldo
                   </button>
@@ -365,10 +402,24 @@ export default function Investments() {
           label="Quanto você investiu agora? (R$)"
           hint="Esse valor entra no total aportado e no valor atual."
           cta="Registrar aporte"
-          checkboxLabel="Descontar do meu saldo (lançar como despesa em Investimentos)"
+          checkboxLabel="Descontar do meu saldo (registra como aplicação)"
           saving={saving}
           onConfirm={handleAporte}
           onClose={() => setAporte(null)}
+        />
+      )}
+
+      {resgate && (
+        <QuickAmountModal
+          title={`Resgatar de ${resgate.name}`}
+          label="Quanto você resgatou? (R$)"
+          hint={`Valor disponível: ${formatCurrency(resgate.currentValue)}. O valor sai do investimento.`}
+          cta="Registrar resgate"
+          checkboxLabel="Creditar no meu saldo (entra na conta)"
+          checkboxDefault
+          saving={saving}
+          onConfirm={handleResgate}
+          onClose={() => setResgate(null)}
         />
       )}
       {updateBal && (

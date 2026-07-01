@@ -216,7 +216,7 @@ export default function TransactionListView({ type }) {
             <CreditCard size={14} style={{ marginRight: 4 }} /> Faturas
           </button>
           <button className={`chip ${tab === 'applications' ? 'active' : ''}`} onClick={() => setTab('applications')}>
-            <TrendingUp size={14} style={{ marginRight: 4 }} /> Aplicações
+            <TrendingUp size={14} style={{ marginRight: 4 }} /> Movimentações
           </button>
         </div>
       )}

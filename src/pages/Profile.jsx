@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, LogOut, Moon, Landmark } from 'lucide-react';
+import { Download, LogOut, Moon, Landmark, PiggyBank } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,7 +12,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
-  const { transactions, goals, summary } = useData();
+  const { transactions, goals, summary, netWorth } = useData();
   const { isDark, toggleTheme } = useTheme();
   const { notify } = useToast();
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -118,6 +118,23 @@ export default function Profile() {
         <button className="btn btn-primary btn-block" onClick={handleSaveInitial} disabled={savingInit}>
           {savingInit ? 'Salvando…' : 'Salvar saldo inicial'}
         </button>
+      </div>
+
+      {/* patrimônio total */}
+      <div className="card card-pad" style={{ marginBottom: 22 }}>
+        <div className="between" style={{ marginBottom: 12 }}>
+          <span className="row gap-sm" style={{ fontWeight: 600 }}>
+            <PiggyBank size={17} /> Patrimônio total
+          </span>
+          <span className="num" style={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--brand-strong)' }}>
+            {formatCurrency(netWorth.total)}
+          </span>
+        </div>
+        <div className="col gap-sm">
+          <div className="between"><span className="muted">Em conta</span><span className="num">{formatCurrency(netWorth.account)}</span></div>
+          <div className="between"><span className="muted">Investimentos</span><span className="num">{formatCurrency(netWorth.invested)}</span></div>
+          <div className="between"><span className="muted">Guardado em metas</span><span className="num">{formatCurrency(netWorth.goals)}</span></div>
+        </div>
       </div>
 
       {/* preferências */}

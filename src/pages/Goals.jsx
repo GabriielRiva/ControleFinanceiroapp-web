@@ -4,7 +4,8 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { addGoal, updateGoal, deleteGoal } from '../services/goalService';
-import { formatCurrency, formatDate, daysUntil } from '../utils/format';
+import { addTransaction } from '../services/transactionService';
+import { formatCurrency, formatDate, daysUntil, todayISO } from '../utils/format';
 import GoalModal from '../components/GoalModal';
 import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -45,7 +46,7 @@ export default function Goals() {
     }
   };
 
-  const handleAporte = async (amount) => {
+  const handleAporte = async (amount, opts = {}) => {
     setSaving(true);
     try {
       const novo = (Number(aporte.currentAmount) || 0) + amount;
@@ -55,7 +56,20 @@ export default function Goals() {
         currentAmount: novo,
         deadline: aporte.deadline,
       });
-      notify('Valor adicionado à meta! 🎉');
+      // descontar do saldo: registra como TRANSFERÊNCIA (neutra)
+      if (opts.checked) {
+        await addTransaction(user.uid, {
+          type: 'transfer',
+          description: `Transferência: ${aporte.name}`,
+          amount,
+          category: 'Metas',
+          date: todayISO(),
+          paymentMethod: 'Pix',
+        });
+        notify('Guardado e descontado do saldo! 🎉');
+      } else {
+        notify('Valor adicionado à meta! 🎉');
+      }
       setAporte(null);
     } catch {
       notify('Não foi possível adicionar.', 'err');
@@ -152,6 +166,7 @@ export default function Goals() {
           label="Quanto você guardou agora? (R$)"
           hint={`Atual: ${formatCurrency(aporte.currentAmount)} de ${formatCurrency(aporte.targetAmount)}. O valor abaixo será somado.`}
           cta="Adicionar à meta"
+          checkboxLabel="Descontar do meu saldo (registra como transferência)"
           saving={saving}
           onConfirm={handleAporte}
           onClose={() => setAporte(null)}

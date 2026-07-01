@@ -100,15 +100,18 @@ export function DataProvider({ children }) {
   const summary = useMemo(() => {
     const mk = currentMonthKey();
     let income = 0, expense = 0, monthIncome = 0, monthExpense = 0;
-    let applications = 0;
+    let applications = 0, redemptions = 0, transfers = 0;
     for (const t of transactions) {
       const amt = Number(t.amount) || 0;
       if (t.type === 'income') {
         income += amt;
         if (monthKey(t.date) === mk) monthIncome += amt;
       } else if (t.type === 'application') {
-        // movimentação neutra: sai da conta, mas NÃO é despesa
-        applications += amt;
+        applications += amt;      // conta -> investimento
+      } else if (t.type === 'redemption') {
+        redemptions += amt;       // investimento -> conta
+      } else if (t.type === 'transfer') {
+        transfers += amt;         // conta -> meta
       } else {
         expense += amt;
         if (monthKey(t.date) === mk) monthExpense += amt;
@@ -119,10 +122,12 @@ export function DataProvider({ children }) {
       income,
       expense,
       applications,
+      redemptions,
+      transfers,
       balance: income - expense,
       initialBalance: init,
-      // saldo em conta (bate com o banco): aplicações saem do caixa
-      realBalance: init + income - expense - applications,
+      // saldo em conta (bate com o banco)
+      realBalance: init + income - expense - applications + redemptions - transfers,
       monthIncome,
       monthExpense,
       monthBalance: monthIncome - monthExpense,
@@ -141,6 +146,17 @@ export function DataProvider({ children }) {
     const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
     return { invested, current, profit, profitPct };
   }, [investments]);
+
+  // Patrimônio total = saldo em conta + investimentos + guardado em metas
+  const netWorth = useMemo(() => {
+    const inGoals = goals.reduce((s, g) => s + (Number(g.currentAmount) || 0), 0);
+    return {
+      account: summary.realBalance,
+      invested: portfolio.current,
+      goals: inGoals,
+      total: summary.realBalance + portfolio.current + inGoals,
+    };
+  }, [summary.realBalance, portfolio.current, goals]);
 
   // Orçamento do mês: gasto por categoria (pela data da compra) vs limite
   const budgetStatus = useMemo(() => {
@@ -194,7 +210,7 @@ export function DataProvider({ children }) {
     <DataContext.Provider
       value={{
         transactions, goals, investments, snapshots, recurring, cards, favorites, budgets, categories,
-        loading, indexError, summary, portfolio, budgetStatus,
+        loading, indexError, summary, portfolio, budgetStatus, netWorth,
         ...categoryData,
       }}
     >

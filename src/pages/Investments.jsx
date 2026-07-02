@@ -103,7 +103,20 @@ export default function Investments() {
         notify('Investimento atualizado.');
       } else {
         await addInvestment(user.uid, data);
-        notify('Investimento adicionado.');
+        // descontar o aportado do saldo (movimentação neutra: aplicação)
+        if (data.deductFromBalance && Number(data.invested) > 0) {
+          await addTransaction(user.uid, {
+            type: 'application',
+            description: `Aplicação: ${data.name}`,
+            amount: Number(data.invested),
+            category: 'Investimentos',
+            date: todayISO(),
+            paymentMethod: 'Pix',
+          });
+          notify('Investimento adicionado e descontado do saldo.');
+        } else {
+          notify('Investimento adicionado.');
+        }
       }
       setModal(null);
     } catch {

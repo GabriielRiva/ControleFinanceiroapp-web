@@ -28,7 +28,20 @@ export default function Goals() {
         notify('Meta atualizada.');
       } else {
         await addGoal(user.uid, data);
-        notify('Meta criada.');
+        // descontar o já guardado do saldo (movimentação neutra: transferência)
+        if (data.deductFromBalance && Number(data.currentAmount) > 0) {
+          await addTransaction(user.uid, {
+            type: 'transfer',
+            description: `Transferência: ${data.name}`,
+            amount: Number(data.currentAmount),
+            category: 'Metas',
+            date: todayISO(),
+            paymentMethod: 'Pix',
+          });
+          notify('Meta criada e valor descontado do saldo.');
+        } else {
+          notify('Meta criada.');
+        }
       }
       setModal(null);
     } catch {

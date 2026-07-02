@@ -16,6 +16,7 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
   const [assetClass, setAssetClass] = useState(initial?.assetClass || 'Renda Fixa');
   const [invested, setInvested] = useState(Number(initial?.invested) || 0);
   const [currentValue, setCurrentValue] = useState(Number(initial?.currentValue) || 0);
+  const [deductFromBalance, setDeductFromBalance] = useState(false);
   const [error, setError] = useState('');
 
   const submit = () => {
@@ -24,7 +25,10 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
     if (!name.trim()) return setError('Dê um nome para o investimento.');
     if (inv <= 0) return setError('Informe quanto você investiu (aportado).');
     setError('');
-    onSave({ name: name.trim(), assetClass, invested: inv, currentValue: cur || inv });
+    onSave({
+      name: name.trim(), assetClass, invested: inv, currentValue: cur || inv,
+      deductFromBalance: !initial && deductFromBalance,
+    });
   };
 
   return (
@@ -77,6 +81,20 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
           Veja esse número no app do seu banco. Pode atualizar quando quiser.
         </span>
       </div>
+
+      {!initial && (
+        <label className="check-row" style={{ marginTop: 16 }}>
+          <input
+            type="checkbox"
+            checked={deductFromBalance}
+            onChange={(e) => setDeductFromBalance(e.target.checked)}
+          />
+          <span>
+            Descontar o valor aportado do meu saldo (registra como <strong>aplicação</strong>).
+            Deixe desmarcado se está só cadastrando um investimento que você já tinha.
+          </span>
+        </label>
+      )}
 
       {error && <p className="expense" style={{ marginTop: 14, fontSize: '0.88rem' }}>{error}</p>}
     </Modal>

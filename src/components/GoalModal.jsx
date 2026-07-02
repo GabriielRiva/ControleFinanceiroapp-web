@@ -8,6 +8,7 @@ export default function GoalModal({ initial, onSave, onClose, saving }) {
   const [targetAmount, setTargetAmount] = useState(Number(initial?.targetAmount) || 0);
   const [currentAmount, setCurrentAmount] = useState(Number(initial?.currentAmount) || 0);
   const [deadline, setDeadline] = useState(initial?.deadline || '');
+  const [deductFromBalance, setDeductFromBalance] = useState(false);
   const [error, setError] = useState('');
 
   const submit = () => {
@@ -18,7 +19,10 @@ export default function GoalModal({ initial, onSave, onClose, saving }) {
     if (!deadline) return setError('Escolha uma data-limite.');
     if (current > target) return setError('O valor guardado não pode ser maior que o alvo.');
     setError('');
-    onSave({ name: name.trim(), targetAmount: target, currentAmount: current, deadline });
+    onSave({
+      name: name.trim(), targetAmount: target, currentAmount: current, deadline,
+      deductFromBalance: !initial && deductFromBalance,
+    });
   };
 
   return (
@@ -60,6 +64,20 @@ export default function GoalModal({ initial, onSave, onClose, saving }) {
         <label className="label">Data-limite</label>
         <input className="input" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
       </div>
+
+      {!initial && (
+        <label className="check-row" style={{ marginTop: 16 }}>
+          <input
+            type="checkbox"
+            checked={deductFromBalance}
+            onChange={(e) => setDeductFromBalance(e.target.checked)}
+          />
+          <span>
+            Descontar o valor já guardado do meu saldo (registra como <strong>transferência</strong>).
+            Deixe desmarcado se esse dinheiro já estava reservado antes.
+          </span>
+        </label>
+      )}
 
       {error && <p className="expense" style={{ marginTop: 14, fontSize: '0.88rem' }}>{error}</p>}
     </Modal>

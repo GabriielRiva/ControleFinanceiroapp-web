@@ -172,7 +172,7 @@ export default function Profile() {
       </button>
 
       <p className="center muted" style={{ marginTop: 20, fontSize: '0.8rem' }}>
-        FinanceApp · versão web
+        Zeno · versão web
       </p>
 
       {confirmLogout && (

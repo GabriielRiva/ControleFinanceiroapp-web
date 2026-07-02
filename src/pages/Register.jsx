@@ -1,3 +1,4 @@
+import ZenoMark from '../components/ZenoMark';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,7 +33,7 @@ export default function Register() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-mark">R$</span> FinanceApp
+          <ZenoMark /> Zeno
         </div>
         <h1 className="auth-title">Criar conta</h1>
         <p className="auth-sub">Comece a organizar suas finanças hoje.</p>

@@ -1,3 +1,4 @@
+import ZenoMark from './ZenoMark';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Target,
@@ -61,8 +62,8 @@ export default function Layout({ children }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">R$</span>
-          <span>FinanceApp</span>
+          <ZenoMark />
+          <span>Zeno</span>
         </div>
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className="nav-link">
@@ -77,7 +78,7 @@ export default function Layout({ children }) {
 
       <div className="main">
         <header className="topbar">
-          <h1 className="page-title">{TITLES[pathname] || 'FinanceApp'}</h1>
+          <h1 className="page-title">{TITLES[pathname] || 'Zeno'}</h1>
           <div className="row gap-sm">
             <button className="icon-btn" onClick={toggleTheme} aria-label="Alternar tema">
               {isDark ? <Sun size={19} /> : <Moon size={19} />}

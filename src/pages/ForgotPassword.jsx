@@ -1,3 +1,4 @@
+import ZenoMark from '../components/ZenoMark';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,7 +29,7 @@ export default function ForgotPassword() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-mark">R$</span> FinanceApp
+          <ZenoMark /> Zeno
         </div>
         <h1 className="auth-title">Recuperar senha</h1>
         <p className="auth-sub">Enviaremos um link para você redefinir sua senha.</p>

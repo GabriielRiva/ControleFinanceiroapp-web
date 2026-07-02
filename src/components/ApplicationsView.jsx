@@ -10,6 +10,12 @@ const META = {
   redemption: { label: 'Resgate', dir: 'in' },
 };
 
+// rótulo considerando o destino (meta vs investimento)
+function movementLabel(t) {
+  if (t.type === 'redemption' && t.category === 'Metas') return 'Retirada de meta';
+  return META[t.type].label;
+}
+
 // Movimentações neutras: saem/entram na conta, mas NÃO são receita nem despesa.
 export default function ApplicationsView({ onDelete, categoryIcon }) {
   const { transactions } = useData();
@@ -69,7 +75,7 @@ export default function ApplicationsView({ onDelete, categoryIcon }) {
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="ttl">{t.description}</div>
                   <div className="sub">
-                    <span className="pill" style={{ fontSize: '0.7rem', padding: '1px 7px', marginRight: 6 }}>{m.label}</span>
+                    <span className="pill" style={{ fontSize: '0.7rem', padding: '1px 7px', marginRight: 6 }}>{movementLabel(t)}</span>
                     {formatDate(t.date)}
                   </div>
                 </div>
@@ -89,7 +95,7 @@ export default function ApplicationsView({ onDelete, categoryIcon }) {
 
       {confirm && (
         <ConfirmDialog
-          title={`Excluir ${META[confirm.type].label.toLowerCase()}`}
+          title={`Excluir ${movementLabel(confirm).toLowerCase()}`}
           message={`Excluir "${confirm.description}"? O valor volta a ajustar o seu saldo em conta. (Isso não altera a carteira de investimentos nem a meta.)`}
           onConfirm={() => onDelete(confirm)}
           onClose={() => setConfirm(null)}

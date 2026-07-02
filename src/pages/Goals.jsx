@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, PiggyBank } from 'lucide-react';
+import { Plus, Pencil, Trash2, PiggyBank, ArrowDownRight } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -16,6 +16,7 @@ export default function Goals() {
   const { notify } = useToast();
   const [modal, setModal] = useState(null);
   const [aporte, setAporte] = useState(null);
+  const [retirar, setRetirar] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +74,39 @@ export default function Goals() {
       setAporte(null);
     } catch {
       notify('Não foi possível adicionar.', 'err');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRetirar = async (amount, opts = {}) => {
+    setSaving(true);
+    try {
+      const atual = Number(retirar.currentAmount) || 0;
+      const take = Math.min(amount, atual); // não retira mais do que tem guardado
+      await updateGoal(retirar.id, {
+        name: retirar.name,
+        targetAmount: Number(retirar.targetAmount) || 0,
+        currentAmount: Math.max(0, atual - take),
+        deadline: retirar.deadline,
+      });
+      // creditar de volta no saldo (movimentação neutra que volta pra conta)
+      if (opts.checked) {
+        await addTransaction(user.uid, {
+          type: 'redemption',
+          description: `Retirada de meta: ${retirar.name}`,
+          amount: take,
+          category: 'Metas',
+          date: todayISO(),
+          paymentMethod: 'Pix',
+        });
+        notify('Valor retirado e devolvido ao saldo.');
+      } else {
+        notify('Valor retirado da meta.');
+      }
+      setRetirar(null);
+    } catch {
+      notify('Não foi possível retirar.', 'err');
     } finally {
       setSaving(false);
     }
@@ -137,6 +171,16 @@ export default function Goals() {
                         <PiggyBank size={15} /> Guardar
                       </button>
                     )}
+                    {current > 0 && (
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '7px 12px', fontSize: '0.84rem' }}
+                        onClick={() => setRetirar(g)}
+                        aria-label="Retirar valor da meta"
+                      >
+                        <ArrowDownRight size={15} /> Retirar
+                      </button>
+                    )}
                     <button className="mini-btn" onClick={() => setModal({ edit: g })} aria-label="Editar">
                       <Pencil size={16} />
                     </button>
@@ -167,9 +211,24 @@ export default function Goals() {
           hint={`Atual: ${formatCurrency(aporte.currentAmount)} de ${formatCurrency(aporte.targetAmount)}. O valor abaixo será somado.`}
           cta="Adicionar à meta"
           checkboxLabel="Descontar do meu saldo (registra como transferência)"
+          checkboxDefault
           saving={saving}
           onConfirm={handleAporte}
           onClose={() => setAporte(null)}
+        />
+      )}
+
+      {retirar && (
+        <QuickAmountModal
+          title={`Retirar de "${retirar.name}"`}
+          label="Quanto você retirou? (R$)"
+          hint={`Guardado: ${formatCurrency(retirar.currentAmount)}. O valor sai da meta.`}
+          cta="Retirar da meta"
+          checkboxLabel="Creditar no meu saldo (volta pra conta)"
+          checkboxDefault
+          saving={saving}
+          onConfirm={handleRetirar}
+          onClose={() => setRetirar(null)}
         />
       )}
 

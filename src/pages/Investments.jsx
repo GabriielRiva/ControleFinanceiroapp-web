@@ -403,6 +403,7 @@ export default function Investments() {
           hint="Esse valor entra no total aportado e no valor atual."
           cta="Registrar aporte"
           checkboxLabel="Descontar do meu saldo (registra como aplicação)"
+          checkboxDefault
           saving={saving}
           onConfirm={handleAporte}
           onClose={() => setAporte(null)}

@@ -15,7 +15,7 @@ export const PAYMENT_METHODS = [
 
 // emoji das categorias padrão
 export const DEFAULT_ICONS = {
-  Salário: '💼', Freelance: '🧑‍💻', Investimentos: '📈',
+  Salário: '💼', Freelance: '🧑‍💻', Investimentos: '📈', Metas: '🎯',
   Alimentação: '🍽️', Transporte: '🚗', Moradia: '🏠', Saúde: '💊',
   Lazer: '🎮', Educação: '📚', Compras: '🛍️', Outros: '✨',
 };

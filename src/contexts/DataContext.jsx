@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import { subscribeTransactions } from '../services/transactionService';
 import { subscribeGoals } from '../services/goalService';
 import { subscribeInvestments, subscribeSnapshots } from '../services/investmentService';
@@ -18,6 +19,7 @@ const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
   const { user } = useAuth();
+  const { notify } = useToast();
   const [transactions, setTransactions] = useState([]);
   const [goals, setGoals] = useState([]);
   const [investments, setInvestments] = useState([]);
@@ -81,9 +83,10 @@ export function DataProvider({ children }) {
         // Caminho B: ao abrir o app, gera as contas fixas pendentes (uma vez por sessão).
         if (!generatedRef.current && list.length > 0) {
           generatedRef.current = true;
-          generateDueRecurring(user.uid, list).catch((e) =>
-            console.error('falha ao gerar contas fixas:', e)
-          );
+          generateDueRecurring(user.uid, list).catch((e) => {
+            console.error('falha ao gerar contas fixas:', e);
+            notify('Não foi possível lançar as contas fixas deste mês. Tente reabrir o app.', 'err');
+          });
         }
       },
       () => {}

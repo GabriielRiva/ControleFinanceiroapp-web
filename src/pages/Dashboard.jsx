@@ -23,14 +23,14 @@ function lastMonths(transactions, count = 6) {
     if (k in idx) {
       const b = buckets[idx[k]];
       if (t.type === 'income') b.income += Number(t.amount) || 0;
-      else b.expense += Number(t.amount) || 0;
+      else if (t.type === 'expense') b.expense += Number(t.amount) || 0;
     }
   }
   return buckets;
 }
 
 export default function Dashboard() {
-  const { summary, transactions, goals, loading, indexError, portfolio } = useData();
+  const { summary, transactions, goals, loading, portfolio } = useData();
   const { profile, user } = useAuth();
 
   const chart = useMemo(() => lastMonths(transactions, 6), [transactions]);
@@ -51,16 +51,6 @@ export default function Dashboard() {
       <p className="muted" style={{ fontSize: '0.95rem', marginBottom: 14 }}>
         {greeting()}{firstName ? `, ${firstName}` : ''} 👋
       </p>
-
-      {indexError && (
-        <div
-          className="card card-pad"
-          style={{ marginBottom: 16, background: 'var(--goal-soft)', borderColor: 'transparent' }}
-        >
-          <strong>Quase lá:</strong> o Firestore está criando os índices necessários. Isso leva cerca de 1 minuto na
-          primeira vez. Se algum dado não aparecer, recarregue a página em instantes.
-        </div>
-      )}
 
       {/* HERO — assinatura do painel */}
       <div className="balance-hero" style={{ marginBottom: 16 }}>

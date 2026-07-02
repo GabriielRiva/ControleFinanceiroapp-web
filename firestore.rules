@@ -7,64 +7,127 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // dono do documento que está sendo escrito (userId do payload == uid)
+    function ownsIncoming() {
+      return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // dono do documento já existente (para read/update/delete)
+    function ownsExisting() {
+      return request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    function isNumber(v) { return v is number; }
+    function isString(v) { return v is string; }
+
+    // ---- Perfil do usuário (doc id = uid; não tem campo userId) ----
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update, delete: if isOwner(userId);
+      allow read, create, update, delete: if isOwner(userId);
     }
 
-    match /transactions/{transactionId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Transações (5 tipos) ----
+    match /transactions/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validTransaction();
+      allow update: if ownsExisting() && ownsIncoming() && validTransaction();
+      function validTransaction() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'amount', 'date'])
+          && isNumber(request.resource.data.amount)
+          && isString(request.resource.data.date)
+          && request.resource.data.type in ['income', 'expense', 'application', 'redemption', 'transfer'];
+      }
     }
 
-    match /goals/{goalId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Metas ----
+    match /goals/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validGoal();
+      allow update: if ownsExisting() && ownsIncoming() && validGoal();
+      function validGoal() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'targetAmount', 'currentAmount'])
+          && isNumber(request.resource.data.targetAmount)
+          && isNumber(request.resource.data.currentAmount);
+      }
     }
 
-    match /investments/{investmentId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Investimentos ----
+    match /investments/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validInvestment();
+      allow update: if ownsExisting() && ownsIncoming() && validInvestment();
+      function validInvestment() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'invested', 'currentValue'])
+          && isNumber(request.resource.data.invested)
+          && isNumber(request.resource.data.currentValue);
+      }
     }
 
-    match /portfolioSnapshots/{snapshotId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Snapshots do patrimônio ----
+    match /portfolioSnapshots/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validSnapshot();
+      allow update: if ownsExisting() && ownsIncoming() && validSnapshot();
+      function validSnapshot() {
+        return request.resource.data.keys().hasAll(['userId', 'date', 'totalInvested', 'totalValue'])
+          && isNumber(request.resource.data.totalInvested)
+          && isNumber(request.resource.data.totalValue);
+      }
     }
 
-    match /recurringExpenses/{recurringId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Contas fixas ----
+    match /recurringExpenses/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validRecurring();
+      allow update: if ownsExisting() && ownsIncoming() && validRecurring();
+      function validRecurring() {
+        return request.resource.data.keys().hasAll(['userId', 'description', 'amount', 'category'])
+          && isNumber(request.resource.data.amount);
+      }
     }
 
-    match /cards/{cardId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Cartões ----
+    match /cards/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validCard();
+      allow update: if ownsExisting() && ownsIncoming() && validCard();
+      function validCard() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'closingDay', 'dueDay'])
+          && isNumber(request.resource.data.closingDay)
+          && isNumber(request.resource.data.dueDay);
+      }
     }
 
-    match /favorites/{favoriteId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Favoritos (lançamento rápido) ----
+    match /favorites/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validFavorite();
+      allow update: if ownsExisting() && ownsIncoming() && validFavorite();
+      function validFavorite() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'description', 'amount', 'category'])
+          && isNumber(request.resource.data.amount);
+      }
     }
 
-    match /budgets/{budgetId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Orçamentos por categoria ----
+    match /budgets/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validBudget();
+      allow update: if ownsExisting() && ownsIncoming() && validBudget();
+      function validBudget() {
+        return request.resource.data.keys().hasAll(['userId', 'category', 'limit'])
+          && isNumber(request.resource.data.limit);
+      }
     }
 
-    match /categories/{categoryId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // ---- Categorias personalizadas ----
+    match /categories/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validCategory();
+      allow update: if ownsExisting() && ownsIncoming() && validCategory();
+      function validCategory() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'name'])
+          && request.resource.data.type in ['income', 'expense'];
+      }
     }
   }
 }

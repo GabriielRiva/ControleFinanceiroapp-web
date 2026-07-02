@@ -1,10 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Target,
-  LineChart, PieChart, User, Moon, Sun,
+  LineChart, PieChart, User, Moon, Sun, AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 
 // Itens que aparecem na barra inferior (mobile) — sem o Perfil para não lotar.
 const NAV = [
@@ -25,6 +26,28 @@ const TITLES = {
   '/relatorios': 'Relatórios',
   '/perfil': 'Perfil',
 };
+
+// Aviso global caso um índice do Firestore ainda esteja sendo criado
+// (ou tenha caído): mostra em qualquer página, não só no Painel.
+function IndexErrorBanner() {
+  const { indexError } = useData();
+  if (!indexError) return null;
+  return (
+    <div
+      className="card card-pad"
+      style={{
+        marginBottom: 16, borderColor: 'var(--goal)',
+        display: 'flex', gap: 10, alignItems: 'flex-start',
+      }}
+    >
+      <AlertTriangle size={18} style={{ color: 'var(--goal)', flexShrink: 0, marginTop: 2 }} />
+      <p className="muted" style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: 0 }}>
+        Alguns dados podem estar carregando de forma incompleta enquanto um índice do banco é criado.
+        Isso costuma se resolver em alguns minutos — se persistir, recarregue a página.
+      </p>
+    </div>
+  );
+}
 
 export default function Layout({ children }) {
   const { isDark, toggleTheme } = useTheme();
@@ -65,7 +88,10 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        <div className="page">{children}</div>
+        <div className="page">
+          <IndexErrorBanner />
+          {children}
+        </div>
       </div>
 
       <nav className="bottom-nav">

@@ -1,6 +1,14 @@
 // Exportação CSV das transações (download no navegador)
 import { formatDate } from './format';
 
+const TYPE_LABELS = {
+  income: 'Receita',
+  expense: 'Despesa',
+  application: 'Aplicação',
+  redemption: 'Resgate',
+  transfer: 'Transferência',
+};
+
 export function exportTransactionsToCsv(transactions) {
   const header = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Forma de pagamento', 'Valor'];
 
@@ -8,7 +16,7 @@ export function exportTransactionsToCsv(transactions) {
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .map((t) => [
       formatDate(t.date),
-      t.type === 'income' ? 'Receita' : 'Despesa',
+      TYPE_LABELS[t.type] || t.type || '',
       t.description || '',
       t.category || '',
       t.paymentMethod || '',

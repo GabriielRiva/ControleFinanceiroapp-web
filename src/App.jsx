@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -23,14 +23,18 @@ function FullScreenLoader() {
   );
 }
 
-// rotas que exigem login
-function Protected({ children }) {
+// Layout das rotas protegidas: monta o DataProvider UMA vez e troca só o
+// conteúdo (Outlet) ao navegar, evitando re-inscrever os listeners do
+// Firestore a cada clique no menu.
+function ProtectedLayout() {
   const { user, initializing } = useAuth();
   if (initializing) return <FullScreenLoader />;
   if (!user) return <Navigate to="/login" replace />;
   return (
     <DataProvider>
-      <Layout>{children}</Layout>
+      <Layout>
+        <Outlet />
+      </Layout>
     </DataProvider>
   );
 }
@@ -54,13 +58,15 @@ export default function App() {
               <Route path="/cadastro" element={<PublicOnly><Register /></PublicOnly>} />
               <Route path="/recuperar" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
 
-              <Route path="/" element={<Protected><Dashboard /></Protected>} />
-              <Route path="/receitas" element={<Protected><Income /></Protected>} />
-              <Route path="/despesas" element={<Protected><Expenses /></Protected>} />
-              <Route path="/investimentos" element={<Protected><Investments /></Protected>} />
-              <Route path="/metas" element={<Protected><Goals /></Protected>} />
-              <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
-              <Route path="/perfil" element={<Protected><Profile /></Protected>} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/receitas" element={<Income />} />
+                <Route path="/despesas" element={<Expenses />} />
+                <Route path="/investimentos" element={<Investments />} />
+                <Route path="/metas" element={<Goals />} />
+                <Route path="/relatorios" element={<Reports />} />
+                <Route path="/perfil" element={<Profile />} />
+              </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

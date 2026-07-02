@@ -22,7 +22,7 @@ import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Investments() {
-  const { investments, snapshots, portfolio } = useData();
+  const { investments, snapshots, portfolio, transactions } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
 
@@ -55,7 +55,11 @@ export default function Investments() {
       .sort((a, b) => b.value - a.value);
   }, [investments]);
 
-  // rentabilidade do mês (desconta aportes feitos desde o último registro)
+  // Rentabilidade do mês: (valor atual − valor do último registro) menos os
+  // fluxos de caixa da carteira no período. Os fluxos vêm das MOVIMENTAÇÕES
+  // reais (aplicação/resgate) — assim aportes e resgates são descontados
+  // corretamente, sem o clamp Math.max que zerava resgates, e o cálculo
+  // continua certo mesmo com resgate parcial (pro-rata) na posição.
   const monthlyReturn = useMemo(() => {
     if (snapshots.length === 0) return null;
     const mk = currentMonthKey();
@@ -63,12 +67,23 @@ export default function Investments() {
     // último registro anterior ao mês atual
     const prev = [...sorted].reverse().find((s) => s.date < mk) || null;
     if (!prev) return null;
-    const aportesMes = Math.max(0, portfolio.invested - (Number(prev.totalInvested) || 0));
-    const rend = (portfolio.current - (Number(prev.totalValue) || 0)) - aportesMes;
+
+    // aporte positivo, resgate negativo — somente movimentações de investimento
+    // ocorridas DEPOIS do mês do último registro.
+    let netContrib = 0;
+    for (const t of transactions) {
+      const tmk = (t.date || '').slice(0, 7);
+      if (tmk <= prev.date) continue;
+      if (t.category !== 'Investimentos') continue;
+      if (t.type === 'application') netContrib += Number(t.amount) || 0;
+      else if (t.type === 'redemption') netContrib -= Number(t.amount) || 0;
+    }
+
     const base = Number(prev.totalValue) || 0;
+    const rend = (portfolio.current - base) - netContrib;
     const pct = base > 0 ? (rend / base) * 100 : 0;
     return { rend, pct, fromLabel: monthLabelFromKey(prev.date) };
-  }, [snapshots, portfolio]);
+  }, [snapshots, portfolio, transactions]);
 
   const evolution = useMemo(
     () => snapshots.map((s) => ({
@@ -135,10 +150,13 @@ export default function Investments() {
       const curVal = Number(resgate.currentValue) || 0;
       const curInv = Number(resgate.invested) || 0;
       const take = Math.min(amount, curVal); // não resgata mais que o valor atual
+      // resgate PRO-RATA: reduz custo e valor na mesma proporção,
+      // preservando o % de lucro da posição após resgates parciais.
+      const frac = curVal > 0 ? take / curVal : 0;
       await updateInvestment(resgate.id, {
         name: resgate.name,
         assetClass: resgate.assetClass,
-        invested: Math.max(0, curInv - take),
+        invested: Math.max(0, curInv * (1 - frac)),
         currentValue: Math.max(0, curVal - take),
       });
       if (opts.checked) {

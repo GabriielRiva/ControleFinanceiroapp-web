@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './Modal';
 import CurrencyInput from './CurrencyInput';
+import { todayISO } from '../utils/format';
 
 const SUGGESTIONS = [
   'Renda Fixa', 'Fundos de Investimento', 'Tesouro Direto',
@@ -16,6 +17,7 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
   const [assetClass, setAssetClass] = useState(initial?.assetClass || 'Renda Fixa');
   const [invested, setInvested] = useState(Number(initial?.invested) || 0);
   const [currentValue, setCurrentValue] = useState(Number(initial?.currentValue) || 0);
+  const [date, setDate] = useState(initial?.date || todayISO());
   const [deductFromBalance, setDeductFromBalance] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,7 +28,7 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
     if (inv <= 0) return setError('Informe quanto você investiu (aportado).');
     setError('');
     onSave({
-      name: name.trim(), assetClass, invested: inv, currentValue: cur || inv,
+      name: name.trim(), assetClass, invested: inv, currentValue: cur || inv, date,
       deductFromBalance: !initial && deductFromBalance,
     });
   };
@@ -67,6 +69,11 @@ export default function InvestmentModal({ initial, onSave, onClose, saving }) {
         <span className="muted" style={{ fontSize: '0.78rem' }}>
           Usada para mostrar como sua carteira está distribuída.
         </span>
+      </div>
+
+      <div className="field">
+        <label className="label">Data do investimento</label>
+        <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
 
       <div className="field">

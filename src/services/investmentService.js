@@ -39,6 +39,7 @@ export async function addInvestment(uid, data) {
     assetClass: data.assetClass || "Outros",
     invested: Number(data.invested) || 0,
     currentValue: Number(data.currentValue) || 0,
+    date: data.date || null, // data em que o investimento foi realizado
     createdAt: serverTimestamp(),
   });
 }
@@ -49,6 +50,7 @@ export async function updateInvestment(id, data) {
     assetClass: data.assetClass || "Outros",
     invested: Number(data.invested) || 0,
     currentValue: Number(data.currentValue) || 0,
+    date: data.date || null,
   });
 }
 

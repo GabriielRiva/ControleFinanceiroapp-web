@@ -14,7 +14,7 @@ import {
 } from '../services/investmentService';
 import { addTransaction } from '../services/transactionService';
 import {
-  formatCurrency, currentMonthKey, monthLabelFromKey, todayISO,
+  formatCurrency, formatDate, currentMonthKey, monthLabelFromKey, todayISO,
 } from '../utils/format';
 import { colorByIndex } from '../utils/categories';
 import InvestmentModal from '../components/InvestmentModal';
@@ -132,6 +132,7 @@ export default function Investments() {
       await updateInvestment(aporte.id, {
         name: aporte.name,
         assetClass: aporte.assetClass,
+        date: aporte.date,
         invested: (Number(aporte.invested) || 0) + amount,
         currentValue: (Number(aporte.currentValue) || 0) + amount,
       });
@@ -169,6 +170,7 @@ export default function Investments() {
       await updateInvestment(resgate.id, {
         name: resgate.name,
         assetClass: resgate.assetClass,
+        date: resgate.date,
         invested: Math.max(0, curInv * (1 - frac)),
         currentValue: Math.max(0, curVal - take),
       });
@@ -199,6 +201,7 @@ export default function Investments() {
       await updateInvestment(updateBal.id, {
         name: updateBal.name,
         assetClass: updateBal.assetClass,
+        date: updateBal.date,
         invested: Number(updateBal.invested) || 0,
         currentValue: newValue,
       });
@@ -387,6 +390,7 @@ export default function Investments() {
                       </span>
                       <span className="muted" style={{ fontSize: '0.82rem' }}>
                         Aportado: {formatCurrency(inv)}
+                        {p.date ? ` · desde ${formatDate(p.date)}` : ''}
                       </span>
                     </div>
                   </div>

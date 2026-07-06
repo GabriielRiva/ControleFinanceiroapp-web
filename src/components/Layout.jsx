@@ -2,7 +2,7 @@ import ZenoMark from './ZenoMark';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Target,
-  LineChart, PieChart, User, Moon, Sun, AlertTriangle,
+  LineChart, PieChart, User, Moon, Sun, AlertTriangle, Landmark,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/receitas', label: 'Receitas', icon: TrendingUp },
   { to: '/despesas', label: 'Despesas', icon: TrendingDown },
   { to: '/investimentos', label: 'Investir', icon: LineChart },
+  { to: '/financiamentos', label: 'Financiar', icon: Landmark },
   { to: '/metas', label: 'Metas', icon: Target },
   { to: '/relatorios', label: 'Relatórios', icon: PieChart },
 ];
@@ -23,6 +24,7 @@ const TITLES = {
   '/receitas': 'Receitas',
   '/despesas': 'Despesas',
   '/investimentos': 'Investimentos',
+  '/financiamentos': 'Financiamentos e Consórcios',
   '/metas': 'Metas',
   '/relatorios': 'Relatórios',
   '/perfil': 'Perfil',

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart, Tag, TrendingUp } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Repeat, CreditCard, FileText, Star, PieChart, Tag, TrendingUp, CheckCircle2, Undo2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
   addTransaction, addInstallments, updateTransaction, deleteTransaction, restoreTransaction,
+  setTransactionPaidStatus,
 } from '../services/transactionService';
+import MarkPaidModal from './MarkPaidModal';
 import { formatCurrency, formatDate } from '../utils/format';
 
 import TransactionModal from './TransactionModal';
@@ -38,6 +40,7 @@ export default function TransactionListView({ type }) {
   const [tab, setTab] = useState('list'); // 'list' | 'invoices'
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [markPaid, setMarkPaid] = useState(null);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -147,6 +150,28 @@ export default function TransactionListView({ type }) {
       }
     } catch {
       notify('Não foi possível excluir.', 'err');
+    }
+  };
+
+  const handleSetPaid = async (data) => {
+    setSaving(true);
+    try {
+      await setTransactionPaidStatus(markPaid.id, data);
+      notify('Despesa marcada como paga.');
+      setMarkPaid(null);
+    } catch {
+      notify('Não foi possível atualizar.', 'err');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnsetPaid = async (t) => {
+    try {
+      await setTransactionPaidStatus(t.id, { paid: false });
+      notify('Despesa marcada como pendente novamente.');
+    } catch {
+      notify('Não foi possível atualizar.', 'err');
     }
   };
 
@@ -287,12 +312,24 @@ export default function TransactionListView({ type }) {
                     <div className="sub">
                       {t.category} · {formatDate(t.date)}
                       {t.paymentMethod ? ` · ${t.paymentMethod}` : ''}
+                      {!isIncome && t.paid && ` · ✅ paga em ${formatDate(t.paidDate)}`}
                     </div>
                   </div>
                   <div className="amt" style={{ color: accent }}>
                     {isIncome ? '+' : '−'} {formatCurrency(t.amount)}
                   </div>
                   <div className="row-actions">
+                    {!isIncome && (
+                      t.paid ? (
+                        <button className="mini-btn" onClick={() => handleUnsetPaid(t)} aria-label="Desmarcar como paga" title="Desmarcar como paga">
+                          <Undo2 size={16} />
+                        </button>
+                      ) : (
+                        <button className="mini-btn" onClick={() => setMarkPaid(t)} aria-label="Marcar como paga" title="Marcar como paga">
+                          <CheckCircle2 size={16} />
+                        </button>
+                      )
+                    )}
                     <button className="mini-btn" onClick={() => setModal({ edit: t })} aria-label="Editar">
                       <Pencil size={16} />
                     </button>
@@ -336,6 +373,14 @@ export default function TransactionListView({ type }) {
       )}
       {showRecurring && <RecurringModal onClose={() => setShowRecurring(false)} />}
       {showCards && <CardsModal onClose={() => setShowCards(false)} />}
+      {markPaid && (
+        <MarkPaidModal
+          transaction={markPaid}
+          saving={saving}
+          onSave={handleSetPaid}
+          onClose={() => setMarkPaid(null)}
+        />
+      )}
       {showFavorites && <FavoritesModal type={type} onClose={() => setShowFavorites(false)} />}
       {showBudget && <BudgetModal onClose={() => setShowBudget(false)} />}
       {showCategories && <CategoriesModal onClose={() => setShowCategories(false)} />}

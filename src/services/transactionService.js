@@ -93,6 +93,15 @@ export async function deleteTransaction(id) {
   return deleteDoc(doc(db, 'transactions', id));
 }
 
+// Marca/desmarca uma despesa (avulsa ou de conta fixa) como paga, sem gerar
+// nova transação nem mexer no saldo de novo — o desconto já aconteceu quando
+// o lançamento foi criado. Isso só guarda "paguei isso, neste dia, por este meio".
+export async function setTransactionPaidStatus(id, { paid, paidDate, paymentMethod }) {
+  const payload = { paid: !!paid, paidDate: paid ? (paidDate || null) : null };
+  if (paid && paymentMethod) payload.paymentMethod = paymentMethod;
+  return updateDoc(doc(db, 'transactions', id), payload);
+}
+
 // Recria um lançamento (usado pelo "Desfazer"), preservando os campos.
 export async function restoreTransaction(uid, data) {
   const payload = {

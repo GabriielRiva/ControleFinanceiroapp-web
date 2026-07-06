@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Income from './pages/Income';
 import Expenses from './pages/Expenses';
 import Investments from './pages/Investments';
+import Financing from './pages/Financing';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="/receitas" element={<Income />} />
                 <Route path="/despesas" element={<Expenses />} />
                 <Route path="/investimentos" element={<Investments />} />
+                <Route path="/financiamentos" element={<Financing />} />
                 <Route path="/metas" element={<Goals />} />
                 <Route path="/relatorios" element={<Reports />} />
                 <Route path="/perfil" element={<Profile />} />

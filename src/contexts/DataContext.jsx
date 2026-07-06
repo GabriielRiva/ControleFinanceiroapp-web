@@ -6,6 +6,9 @@ import { subscribeGoals } from '../services/goalService';
 import { subscribeInvestments, subscribeSnapshots } from '../services/investmentService';
 import { subscribeRecurring, generateDueRecurring } from '../services/recurringService';
 import { subscribeCards } from '../services/cardService';
+import { subscribeFinancings } from '../services/financingService';
+import { subscribeConsortiums } from '../services/consortiumService';
+import { subscribeInvoicePayments } from '../services/invoicePaymentService';
 import { subscribeFavorites } from '../services/favoriteService';
 import { subscribeBudgets } from '../services/budgetService';
 import { subscribeCategories } from '../services/categoryService';
@@ -26,6 +29,9 @@ export function DataProvider({ children }) {
   const [snapshots, setSnapshots] = useState([]);
   const [recurring, setRecurring] = useState([]);
   const [cards, setCards] = useState([]);
+  const [financings, setFinancings] = useState([]);
+  const [consortiums, setConsortiums] = useState([]);
+  const [invoicePayments, setInvoicePayments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -42,6 +48,9 @@ export function DataProvider({ children }) {
       setSnapshots([]);
       setRecurring([]);
       setCards([]);
+      setFinancings([]);
+      setConsortiums([]);
+      setInvoicePayments([]);
       setFavorites([]);
       setBudgets([]);
       setCategories([]);
@@ -92,12 +101,15 @@ export function DataProvider({ children }) {
       () => {}
     );
     const unsubC = subscribeCards(user.uid, (list) => setCards(list), () => {});
+    const unsubFin = subscribeFinancings(user.uid, (list) => setFinancings(list), () => {});
+    const unsubCons = subscribeConsortiums(user.uid, (list) => setConsortiums(list), () => {});
+    const unsubIP = subscribeInvoicePayments(user.uid, (list) => setInvoicePayments(list), () => {});
     const unsubF = subscribeFavorites(user.uid, (list) => setFavorites(list), () => {});
     const unsubB = subscribeBudgets(user.uid, (list) => setBudgets(list), () => {});
     const unsubCat = subscribeCategories(user.uid, (list) => setCategories(list), () => {});
     const unsubU = subscribeUserDoc(user.uid, (d) => setInitialBalance(d?.initialBalance || 0), () => {});
 
-    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubF(); unsubB(); unsubCat(); unsubU(); };
+    return () => { unsubT(); unsubG(); unsubI(); unsubS(); unsubR(); unsubC(); unsubFin(); unsubCons(); unsubIP(); unsubF(); unsubB(); unsubCat(); unsubU(); };
   }, [user]);
 
   const summary = useMemo(() => {
@@ -213,6 +225,7 @@ export function DataProvider({ children }) {
     <DataContext.Provider
       value={{
         transactions, goals, investments, snapshots, recurring, cards, favorites, budgets, categories,
+        financings, consortiums, invoicePayments,
         loading, indexError, summary, portfolio, budgetStatus, netWorth,
         ...categoryData,
       }}

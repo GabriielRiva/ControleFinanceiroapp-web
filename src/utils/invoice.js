@@ -9,16 +9,25 @@ import { MONTH_NAMES } from './format';
  * Ex: Nubank fecha dia 18, vence dia 24.
  *  - compra em 17/01 -> fecha 18/01 -> vence 24/01 -> "2026-01"
  *  - compra em 19/01 -> fecha 18/02 -> vence 24/02 -> "2026-02"
+ *
+ * card.closingDayRollsToNext (opcional, por cartão): quando true, uma compra
+ * feita NO PRÓPRIO dia do fechamento já entra na fatura seguinte (comum em
+ * vários bancos — "fecha dia 17" quer dizer que o dia 17 já é o início do
+ * próximo ciclo). Quando false/ausente (padrão), só dias APÓS o fechamento
+ * rolam pra fatura seguinte.
  */
 export function invoiceMonthForDate(isoDate, card) {
   const [y, m, d] = isoDate.split('-').map(Number);
   const C = Number(card.closingDay) || 1;
   const D = Number(card.dueDay) || 1;
+  const rollsOnClosingDay = card.closingDayRollsToNext
+    ? d >= C
+    : d > C;
 
   // mês de fechamento que captura a compra
   let closeY = y;
   let closeM = m;
-  if (d > C) {
+  if (rollsOnClosingDay) {
     closeM += 1;
     if (closeM > 12) { closeM = 1; closeY += 1; }
   }

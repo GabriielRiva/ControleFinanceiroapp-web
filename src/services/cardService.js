@@ -28,6 +28,7 @@ export async function addCard(uid, data) {
     name: data.name,
     closingDay: Number(data.closingDay) || 1,
     dueDay: Number(data.dueDay) || 1,
+    closingDayRollsToNext: !!data.closingDayRollsToNext,
     colorIndex: Number(data.colorIndex) || 0,
     createdAt: serverTimestamp(),
   });
@@ -38,6 +39,7 @@ export async function updateCard(id, data) {
     name: data.name,
     closingDay: Number(data.closingDay) || 1,
     dueDay: Number(data.dueDay) || 1,
+    closingDayRollsToNext: !!data.closingDayRollsToNext,
     colorIndex: Number(data.colorIndex) || 0,
   });
 }

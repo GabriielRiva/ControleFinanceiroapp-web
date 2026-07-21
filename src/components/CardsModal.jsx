@@ -7,21 +7,24 @@ import { useToast } from '../contexts/ToastContext';
 import { addCard, updateCard, deleteCard } from '../services/cardService';
 import { colorByIndex } from '../utils/categories';
 
-const emptyForm = { name: '', closingDay: '18', dueDay: '24' };
+const emptyForm = { name: '', closingDay: '18', dueDay: '24', closingDayRollsToNext: false };
 
 export default function CardsModal({ onClose }) {
   const { cards } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
 
-  const [form, setForm] = useState(null); // {id?, name, closingDay, dueDay}
+  const [form, setForm] = useState(null); // {id?, name, closingDay, dueDay, closingDayRollsToNext}
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const open = (card) => {
     setError('');
     setForm(card
-      ? { id: card.id, name: card.name, closingDay: String(card.closingDay), dueDay: String(card.dueDay), colorIndex: card.colorIndex }
+      ? {
+          id: card.id, name: card.name, closingDay: String(card.closingDay), dueDay: String(card.dueDay),
+          closingDayRollsToNext: !!card.closingDayRollsToNext, colorIndex: card.colorIndex,
+        }
       : { ...emptyForm, colorIndex: cards.length });
   };
 
@@ -36,6 +39,7 @@ export default function CardsModal({ onClose }) {
     try {
       const payload = {
         name: form.name.trim(), closingDay: close, dueDay: due,
+        closingDayRollsToNext: !!form.closingDayRollsToNext,
         colorIndex: form.colorIndex ?? cards.length,
       };
       if (form.id) {
@@ -84,6 +88,7 @@ export default function CardsModal({ onClose }) {
                   <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{c.name}</div>
                   <div className="muted" style={{ fontSize: '0.78rem' }}>
                     Fecha dia {c.closingDay} · vence dia {c.dueDay}
+                    {c.closingDayRollsToNext && ' · dia do fechamento já vai pra próxima fatura'}
                   </div>
                 </div>
               </div>
@@ -111,6 +116,21 @@ export default function CardsModal({ onClose }) {
               <label className="label">Vence dia</label>
               <input className="input num" inputMode="numeric" value={form.dueDay} onChange={(e) => setForm({ ...form, dueDay: e.target.value })} placeholder="24" />
             </div>
+          </div>
+          <div className="setting-row" style={{ marginBottom: 16 }}>
+            <div>
+              <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>Dia do fechamento já vai pra próxima fatura</div>
+              <div className="muted" style={{ fontSize: '0.78rem', marginTop: 2 }}>
+                Ative se uma compra feita bem no dia {form.closingDay || 'X'} costuma cair na fatura seguinte,
+                não na atual (varia de banco pra banco).
+              </div>
+            </div>
+            <button
+              className={`switch ${form.closingDayRollsToNext ? 'on' : ''}`}
+              onClick={() => setForm({ ...form, closingDayRollsToNext: !form.closingDayRollsToNext })}
+              aria-label="Dia do fechamento já vai pra próxima fatura"
+              type="button"
+            />
           </div>
           {error && <p className="expense" style={{ marginBottom: 12, fontSize: '0.85rem' }}>{error}</p>}
           <div className="row gap">

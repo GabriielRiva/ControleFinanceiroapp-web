@@ -8,6 +8,7 @@ import {
   setTransactionPaidStatus,
 } from '../services/transactionService';
 import MarkPaidModal from './MarkPaidModal';
+import CardCsvImportModal from './CardCsvImportModal';
 import { formatCurrency, formatDate } from '../utils/format';
 import { effectiveMonthKey, indexCardsById } from '../utils/invoice';
 
@@ -48,6 +49,7 @@ export default function TransactionListView({ type }) {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // anos disponíveis para o filtro
@@ -221,6 +223,9 @@ export default function TransactionListView({ type }) {
           <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowCategories(true)}>
             <Tag size={17} /> Categorias
           </button>
+          <button className="btn btn-ghost grow" style={{ justifyContent: 'flex-start', gap: 10 }} onClick={() => setShowCsvImport(true)}>
+            <FileText size={17} /> Importar fatura (CSV)
+          </button>
         </div>
       )}
 
@@ -389,6 +394,7 @@ export default function TransactionListView({ type }) {
       {showFavorites && <FavoritesModal type={type} onClose={() => setShowFavorites(false)} />}
       {showBudget && <BudgetModal onClose={() => setShowBudget(false)} />}
       {showCategories && <CategoriesModal onClose={() => setShowCategories(false)} />}
+      {showCsvImport && <CardCsvImportModal onClose={() => setShowCsvImport(false)} />}
     </>
   );
 }

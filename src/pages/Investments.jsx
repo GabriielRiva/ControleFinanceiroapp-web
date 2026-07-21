@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, lazy, Suspense } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell,
 } from 'recharts';
 import {
   Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight, ArrowDownRight,
+  Upload, Loader2,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
-  addInvestment, updateInvestment, deleteInvestment, saveSnapshot,
+  addInvestment, updateInvestment, deleteInvestment, saveSnapshot, applyAporte, applyResgate,
 } from '../services/investmentService';
 import { addTransaction } from '../services/transactionService';
 import {
@@ -20,6 +21,9 @@ import { colorByIndex } from '../utils/categories';
 import InvestmentModal from '../components/InvestmentModal';
 import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+// carregado só quando o modal é aberto — pdfjs-dist é pesado e a maioria
+// das visitas nunca importa um extrato
+const EqiImportModal = lazy(() => import('../components/EqiImportModal'));
 
 export default function Investments() {
   const { investments, snapshots, portfolio, transactions } = useData();
@@ -33,6 +37,7 @@ export default function Investments() {
   const [confirm, setConfirm] = useState(null);  // position
   const [allocView, setAllocView] = useState('class'); // 'class' | 'asset'
   const [saving, setSaving] = useState(false);
+  const [showEqiImport, setShowEqiImport] = useState(false);
 
   const allocation = useMemo(
     () => investments
@@ -129,12 +134,13 @@ export default function Investments() {
   const handleAporte = async (amount, opts = {}) => {
     setSaving(true);
     try {
+      const { invested, currentValue } = applyAporte(aporte, amount);
       await updateInvestment(aporte.id, {
         name: aporte.name,
         assetClass: aporte.assetClass,
         date: aporte.date,
-        invested: (Number(aporte.invested) || 0) + amount,
-        currentValue: (Number(aporte.currentValue) || 0) + amount,
+        invested,
+        currentValue,
       });
       // descontar do saldo: registra como APLICAÇÃO (neutra, não é despesa)
       if (opts.checked) {
@@ -161,18 +167,13 @@ export default function Investments() {
   const handleResgate = async (amount, opts = {}) => {
     setSaving(true);
     try {
-      const curVal = Number(resgate.currentValue) || 0;
-      const curInv = Number(resgate.invested) || 0;
-      const take = Math.min(amount, curVal); // não resgata mais que o valor atual
-      // resgate PRO-RATA: reduz custo e valor na mesma proporção,
-      // preservando o % de lucro da posição após resgates parciais.
-      const frac = curVal > 0 ? take / curVal : 0;
+      const { invested, currentValue, take } = applyResgate(resgate, amount);
       await updateInvestment(resgate.id, {
         name: resgate.name,
         assetClass: resgate.assetClass,
         date: resgate.date,
-        invested: Math.max(0, curInv * (1 - frac)),
-        currentValue: Math.max(0, curVal - take),
+        invested,
+        currentValue,
       });
       if (opts.checked) {
         await addTransaction(user.uid, {
@@ -266,13 +267,18 @@ export default function Investments() {
         )}
       </div>
 
-      <div className="between" style={{ marginBottom: 18 }}>
+      <div className="between" style={{ marginBottom: 18, gap: 8, flexWrap: 'wrap' }}>
         <button className="btn btn-ghost" onClick={registerMonth} title="Salva o valor de hoje no histórico de evolução">
           <CalendarPlus size={17} /> <span className="add-label">Registrar mês</span>
         </button>
-        <button className="btn btn-primary" onClick={() => setModal({})}>
-          <Plus size={18} /> <span className="add-label">Novo investimento</span>
-        </button>
+        <div className="row gap-sm">
+          <button className="btn btn-ghost" onClick={() => setShowEqiImport(true)}>
+            <Upload size={17} /> <span className="add-label">Importar extrato</span>
+          </button>
+          <button className="btn btn-primary" onClick={() => setModal({})}>
+            <Plus size={18} /> <span className="add-label">Novo investimento</span>
+          </button>
+        </div>
       </div>
 
       {/* evolução do patrimônio */}
@@ -478,6 +484,17 @@ export default function Investments() {
           onConfirm={() => handleDelete(confirm)}
           onClose={() => setConfirm(null)}
         />
+      )}
+      {showEqiImport && (
+        <Suspense fallback={
+          <div className="overlay">
+            <div className="card card-pad" style={{ margin: 'auto', textAlign: 'center' }}>
+              <Loader2 size={22} className="spin" />
+            </div>
+          </div>
+        }>
+          <EqiImportModal onClose={() => setShowEqiImport(false)} />
+        </Suspense>
       )}
     </>
   );

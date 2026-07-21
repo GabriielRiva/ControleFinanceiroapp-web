@@ -58,6 +58,35 @@ export async function deleteInvestment(id) {
   return deleteDoc(doc(db, 'investments', id));
 }
 
+/* ----------------- Matemática de aporte/resgate (compartilhada) -----------------
+ * Extraída pra cá pra ser usada tanto pela tela de Investimentos (aporte/resgate
+ * manual) quanto pelo importador de extrato — mesma fórmula, sem duplicar.
+ */
+
+// Aporte: soma igualmente ao custo e ao valor atual (assume que o dinheiro
+// entrou "ao par" — o rendimento futuro é capturado depois, via resgate
+// pró-rata ou "atualizar saldo").
+export function applyAporte(position, amount) {
+  return {
+    invested: (Number(position.invested) || 0) + amount,
+    currentValue: (Number(position.currentValue) || 0) + amount,
+  };
+}
+
+// Resgate PRO-RATA: reduz custo e valor na mesma proporção, preservando o %
+// de lucro da posição após resgates parciais.
+export function applyResgate(position, amount) {
+  const curVal = Number(position.currentValue) || 0;
+  const curInv = Number(position.invested) || 0;
+  const take = Math.min(amount, curVal); // não resgata mais que o valor atual
+  const frac = curVal > 0 ? take / curVal : 0;
+  return {
+    invested: Math.max(0, curInv * (1 - frac)),
+    currentValue: Math.max(0, curVal - take),
+    take,
+  };
+}
+
 /* ----------------- Histórico mensal do patrimônio ----------------- */
 export function subscribeSnapshots(uid, onData, onError) {
   const q = query(snapshotsCol, where('userId', '==', uid));

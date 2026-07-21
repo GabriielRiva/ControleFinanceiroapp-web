@@ -47,3 +47,21 @@ export function invoiceLabel(invoiceMonth) {
   const [y, m] = invoiceMonth.split('-').map(Number);
   return `${MONTH_NAMES[m - 1]}/${y}`;
 }
+
+/**
+ * "Mês efetivo" de uma transação: pra compras no cartão, é o mês da FATURA
+ * (respeitando o fechamento), não o mês da data da compra. Pra qualquer
+ * outra forma de pagamento, é o mês da própria data. Isso mantém Despesas,
+ * Dashboard, Relatórios e Orçamento consistentes com o que a aba Faturas
+ * já mostra.
+ */
+export function effectiveMonthKey(transaction, cardsById) {
+  const card = transaction.cardId ? cardsById?.[transaction.cardId] : null;
+  if (card) return invoiceMonthForDate(transaction.date, card);
+  return (transaction.date || '').slice(0, 7);
+}
+
+// Helper pra montar o mapa { cardId: card } usado por effectiveMonthKey.
+export function indexCardsById(cards) {
+  return Object.fromEntries((cards || []).map((c) => [c.id, c]));
+}

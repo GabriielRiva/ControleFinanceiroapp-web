@@ -17,6 +17,7 @@ import {
   EXPENSE_CATEGORIES, INCOME_CATEGORIES, DEFAULT_ICONS,
 } from '../utils/categories';
 import { currentMonthKey, monthKey } from '../utils/format';
+import { effectiveMonthKey, indexCardsById } from '../utils/invoice';
 
 const DataContext = createContext(null);
 
@@ -114,6 +115,7 @@ export function DataProvider({ children }) {
 
   const summary = useMemo(() => {
     const mk = currentMonthKey();
+    const cardsById = indexCardsById(cards);
     let income = 0, expense = 0, monthIncome = 0, monthExpense = 0;
     let applications = 0, redemptions = 0, transfers = 0;
     for (const t of transactions) {
@@ -129,7 +131,8 @@ export function DataProvider({ children }) {
         transfers += amt;         // conta -> meta
       } else {
         expense += amt;
-        if (monthKey(t.date) === mk) monthExpense += amt;
+        // despesa no cartão conta pro mês da FATURA, não da data da compra
+        if (effectiveMonthKey(t, cardsById) === mk) monthExpense += amt;
       }
     }
     const init = Number(initialBalance) || 0;
@@ -148,7 +151,7 @@ export function DataProvider({ children }) {
       monthBalance: monthIncome - monthExpense,
       savings: Math.max(income - expense, 0),
     };
-  }, [transactions, initialBalance]);
+  }, [transactions, initialBalance, cards]);
 
   // Totais da carteira de investimentos
   const portfolio = useMemo(() => {
@@ -173,13 +176,14 @@ export function DataProvider({ children }) {
     };
   }, [summary.realBalance, portfolio.current, goals]);
 
-  // Orçamento do mês: gasto por categoria (pela data da compra) vs limite
+  // Orçamento do mês: gasto por categoria (pelo mês da fatura, no caso de cartão) vs limite
   const budgetStatus = useMemo(() => {
     const mk = currentMonthKey();
+    const cardsById = indexCardsById(cards);
     const spentByCat = {};
     for (const t of transactions) {
       if (t.type !== 'expense') continue;
-      if (monthKey(t.date) !== mk) continue;
+      if (effectiveMonthKey(t, cardsById) !== mk) continue;
       spentByCat[t.category] = (spentByCat[t.category] || 0) + (Number(t.amount) || 0);
     }
     const items = budgets
@@ -198,7 +202,7 @@ export function DataProvider({ children }) {
     const overCount = items.filter((i) => i.status === 'over').length;
 
     return { items, totalLimit, totalSpent, totalPct, overCount };
-  }, [transactions, budgets]);
+  }, [transactions, budgets, cards]);
 
   // Categorias: padrão + personalizadas (separadas por tipo)
   const categoryData = useMemo(() => {

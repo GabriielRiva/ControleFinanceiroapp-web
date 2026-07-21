@@ -7,11 +7,13 @@ import { TrendingUp, TrendingDown, PiggyBank, Wallet, ArrowRight, LineChart, Lan
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, MONTH_SHORT, MONTH_NAMES, greeting, daysUntil } from '../utils/format';
+import { effectiveMonthKey, indexCardsById } from '../utils/invoice';
 import BudgetSummary from '../components/BudgetSummary';
 
-function lastMonths(transactions, count = 6) {
+function lastMonths(transactions, cards, count = 6) {
   const now = new Date();
   const buckets = [];
+  const cardsById = indexCardsById(cards);
   for (let i = count - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -19,21 +21,23 @@ function lastMonths(transactions, count = 6) {
   }
   const idx = Object.fromEntries(buckets.map((b, i) => [b.key, i]));
   for (const t of transactions) {
-    const k = (t.date || '').slice(0, 7);
-    if (k in idx) {
-      const b = buckets[idx[k]];
-      if (t.type === 'income') b.income += Number(t.amount) || 0;
-      else if (t.type === 'expense') b.expense += Number(t.amount) || 0;
+    if (t.type === 'income') {
+      const k = (t.date || '').slice(0, 7);
+      if (k in idx) buckets[idx[k]].income += Number(t.amount) || 0;
+    } else if (t.type === 'expense') {
+      // despesa no cartão entra no mês da FATURA, não da data da compra
+      const k = effectiveMonthKey(t, cardsById);
+      if (k in idx) buckets[idx[k]].expense += Number(t.amount) || 0;
     }
   }
   return buckets;
 }
 
 export default function Dashboard() {
-  const { summary, transactions, goals, loading, portfolio } = useData();
+  const { summary, transactions, goals, loading, portfolio, cards } = useData();
   const { profile, user } = useAuth();
 
-  const chart = useMemo(() => lastMonths(transactions, 6), [transactions]);
+  const chart = useMemo(() => lastMonths(transactions, cards, 6), [transactions, cards]);
   const hasChart = chart.some((b) => b.income > 0 || b.expense > 0);
   const firstName = (profile?.name || user?.displayName || '').split(' ')[0] || '';
 

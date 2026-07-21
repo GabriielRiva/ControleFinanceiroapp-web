@@ -9,6 +9,7 @@ import {
 } from '../services/transactionService';
 import MarkPaidModal from './MarkPaidModal';
 import { formatCurrency, formatDate } from '../utils/format';
+import { effectiveMonthKey, indexCardsById } from '../utils/invoice';
 
 import TransactionModal from './TransactionModal';
 import ConfirmDialog from './ConfirmDialog';
@@ -24,9 +25,10 @@ import CategoriesModal from './CategoriesModal';
 
 export default function TransactionListView({ type }) {
   const isIncome = type === 'income';
-  const { transactions, loading, categoryIcon } = useData();
+  const { transactions, loading, categoryIcon, cards } = useData();
   const { user } = useAuth();
   const { notify } = useToast();
+  const cardsById = useMemo(() => indexCardsById(cards), [cards]);
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(() => {
@@ -52,11 +54,12 @@ export default function TransactionListView({ type }) {
   const years = useMemo(() => {
     const set = new Set(
       transactions.filter((t) => t.type === type)
-        .map((t) => (t.date || '').slice(0, 4)).filter(Boolean)
+        .map((t) => (type === 'expense' ? effectiveMonthKey(t, cardsById) : (t.date || '').slice(0, 7)).slice(0, 4))
+        .filter(Boolean)
     );
     set.add(String(new Date().getFullYear()));
     return [...set].sort((a, b) => b - a);
-  }, [transactions, type]);
+  }, [transactions, type, cardsById]);
 
   const items = useMemo(() => {
     let list = transactions.filter((t) => t.type === type);
@@ -75,14 +78,16 @@ export default function TransactionListView({ type }) {
       if (f.from) list = list.filter((t) => t.date >= f.from);
       if (f.to) list = list.filter((t) => t.date <= f.to);
     } else {
-      if (f.year !== 'all') list = list.filter((t) => (t.date || '').slice(0, 4) === f.year);
-      if (f.month !== 'all') list = list.filter((t) => (t.date || '').slice(5, 7) === f.month);
+      // despesa no cartão é filtrada pelo mês da FATURA, não da data da compra
+      const monthOf = (t) => (type === 'expense' ? effectiveMonthKey(t, cardsById) : (t.date || '').slice(0, 7));
+      if (f.year !== 'all') list = list.filter((t) => monthOf(t).slice(0, 4) === f.year);
+      if (f.month !== 'all') list = list.filter((t) => monthOf(t).slice(5, 7) === f.month);
     }
     if (f.category !== 'all') list = list.filter((t) => t.category === f.category);
     if (!isIncome && f.payment !== 'all') list = list.filter((t) => (t.paymentMethod || '') === f.payment);
 
     return list;
-  }, [transactions, type, search, filters, isIncome]);
+  }, [transactions, type, search, filters, isIncome, cardsById]);
 
   const total = items.reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const filtered = search || isFilterActive(filters);

@@ -7,9 +7,11 @@ import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Minus } from 'l
 import { useData } from '../contexts/DataContext';
 import { formatCurrency, MONTH_NAMES, MONTH_SHORT } from '../utils/format';
 import { categoryColor, colorByIndex } from '../utils/categories';
+import { effectiveMonthKey, indexCardsById } from '../utils/invoice';
 
 export default function Reports() {
-  const { transactions, loading } = useData();
+  const { transactions, loading, cards } = useData();
+  const cardsById = useMemo(() => indexCardsById(cards), [cards]);
 
   // série dos últimos 6 meses (receitas e despesas) para o comparativo
   const series = useMemo(() => {
@@ -22,15 +24,17 @@ export default function Reports() {
     }
     const idx = Object.fromEntries(buckets.map((b, i) => [b.key, i]));
     for (const t of transactions) {
-      const k = (t.date || '').slice(0, 7);
-      if (k in idx) {
-        const b = buckets[idx[k]];
-        if (t.type === 'income') b.Receitas += Number(t.amount) || 0;
-        else if (t.type === 'expense') b.Despesas += Number(t.amount) || 0;
+      if (t.type === 'income') {
+        const k = (t.date || '').slice(0, 7);
+        if (k in idx) buckets[idx[k]].Receitas += Number(t.amount) || 0;
+      } else if (t.type === 'expense') {
+        // despesa no cartão entra no mês da FATURA, não da data da compra
+        const k = effectiveMonthKey(t, cardsById);
+        if (k in idx) buckets[idx[k]].Despesas += Number(t.amount) || 0;
       }
     }
     return buckets;
-  }, [transactions]);
+  }, [transactions, cardsById]);
 
   // variação do mês atual vs anterior
   const delta = useMemo(() => {
@@ -51,22 +55,27 @@ export default function Reports() {
   const hasComparison = series.some((b) => b.Receitas > 0 || b.Despesas > 0);
 
   const years = useMemo(() => {
-    const set = new Set(transactions.map((t) => (t.date || '').slice(0, 4)).filter(Boolean));
+    const set = new Set(
+      transactions.map((t) => (t.type === 'expense' ? effectiveMonthKey(t, cardsById) : (t.date || '').slice(0, 7)).slice(0, 4))
+        .filter(Boolean)
+    );
     set.add(String(new Date().getFullYear()));
     return [...set].sort((a, b) => b - a);
-  }, [transactions]);
+  }, [transactions, cardsById]);
 
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [month, setMonth] = useState('all'); // 'all' | '01'..'12'
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
-      const [y, m] = (t.date || '').split('-');
+      // despesa no cartão é filtrada pelo mês da FATURA, não da data da compra
+      const key = t.type === 'expense' ? effectiveMonthKey(t, cardsById) : (t.date || '').slice(0, 7);
+      const [y, m] = key.split('-');
       if (y !== year) return false;
       if (month !== 'all' && m !== month) return false;
       return true;
     });
-  }, [transactions, year, month]);
+  }, [transactions, year, month, cardsById]);
 
   const totals = useMemo(() => {
     let income = 0, expense = 0;

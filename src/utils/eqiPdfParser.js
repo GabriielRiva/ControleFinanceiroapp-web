@@ -151,8 +151,37 @@ function parseFundPositions(text) {
   return positions;
 }
 
+/**
+ * Extrai o saldo líquido ATUAL de cada título de renda fixa ainda em
+ * carteira, a partir das seções "Renda fixa - Detalhamento - TIPO | EMISSOR".
+ * A chave gerada ("EMISSOR / CÓDIGO-DO-ATIVO") é a mesma usada nos eventos
+ * de movimentação de renda fixa, então casam automaticamente.
+ */
+function parseRendaFixaPositions(text) {
+  const re = /Detalhamento - (CDB|LCA|LCI|CRI|CRA|LC|DEBENTURE) \| ([^\n]+)/g;
+  const positions = {};
+  let m;
+  while ((m = re.exec(text))) {
+    const type = m[1];
+    const emissor = cleanName(m[2]);
+    const bodyStart = m.index + m[0].length;
+    const disclaimerIdx = text.indexOf('Disclaimers', bodyStart);
+    const body = text.slice(bodyStart, disclaimerIdx > 0 ? disclaimerIdx : bodyStart + 800);
+    const flatBody = body.replace(/\n/g, ' ');
+    const codeMatch = flatBody.match(new RegExp(`${type}-\\s*([A-Z0-9]+)`));
+    const ativoCode = codeMatch ? `${type}-${codeMatch[1].replace(/\s+/g, '')}` : type;
+    const lines = body.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lastLine = lines[lines.length - 1] || '';
+    const nums = lastLine.match(/-?[\d.,]+/g) || [];
+    if (nums.length === 0) continue;
+    const key = `${emissor} / ${ativoCode}`;
+    positions[key] = (positions[key] || 0) + toAmount(nums[nums.length - 1]);
+  }
+  return positions;
+}
+
 export function parseEqiStatement(text) {
   const events = parseMovements(text);
-  const fundPositions = parseFundPositions(text);
-  return { events, fundPositions };
+  const positions = { ...parseFundPositions(text), ...parseRendaFixaPositions(text) };
+  return { events, positions };
 }

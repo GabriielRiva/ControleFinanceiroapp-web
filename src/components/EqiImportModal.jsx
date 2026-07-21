@@ -38,7 +38,7 @@ export default function EqiImportModal({ onClose }) {
 
   const [status, setStatus] = useState('idle'); // idle | loading | parsed
   const [groups, setGroups] = useState([]); // um por ativo detectado
-  const [fundPositions, setFundPositions] = useState({});
+  const [positions, setPositions] = useState({});
   const [importing, setImporting] = useState(false);
 
   const handleFile = async (file) => {
@@ -46,7 +46,7 @@ export default function EqiImportModal({ onClose }) {
     setStatus('loading');
     try {
       const text = await extractPdfText(file);
-      const { events, fundPositions: fp } = parseEqiStatement(text);
+      const { events, positions: pos } = parseEqiStatement(text);
       if (events.length === 0) {
         notify('Não encontrei aportes/resgates nesse PDF. É um extrato da EQI?', 'err');
         setStatus('idle');
@@ -72,7 +72,7 @@ export default function EqiImportModal({ onClose }) {
         };
       });
 
-      setFundPositions(fp);
+      setPositions(pos);
       setGroups(built);
       setStatus('parsed');
     } catch (e) {
@@ -109,6 +109,15 @@ export default function EqiImportModal({ onClose }) {
         }
 
         for (const ev of checkedEvents) {
+          if (ev.type === 'redemption' && ev.amount > position.currentValue) {
+            // o resgate vale mais do que sabíamos que a posição tinha —
+            // sinal de rendimento (juros/valorização) que não foi capturado
+            // por nenhum "atualizar saldo" no meio do caminho. Sobe o valor
+            // atual pra refletir isso ANTES do resgate, senão o pro-rata
+            // trunca o valor creditado (foi o que aconteceu com o CDB: só
+            // creditava R$2.000 de um resgate de R$2.111,71 de verdade).
+            position = { ...position, currentValue: ev.amount };
+          }
           const result = ev.type === 'application' ? applyAporte(position, ev.amount) : applyResgate(position, ev.amount);
           position = { ...position, invested: result.invested, currentValue: result.currentValue };
           await updateInvestment(positionId, {
@@ -126,8 +135,9 @@ export default function EqiImportModal({ onClose }) {
         }
 
         // ajusta o valor atual final com o que a EQI declarou na posição
-        // (o replay de aporte/resgate sozinho não capta rendimento de mercado)
-        const finalValue = fundPositions[g.parsedName];
+        // (o replay de aporte/resgate sozinho não capta rendimento de mercado
+        // que ainda não passou por um resgate)
+        const finalValue = positions[g.parsedName];
         if (finalValue != null) {
           position = { ...position, currentValue: finalValue };
           await updateInvestment(positionId, {
@@ -231,9 +241,9 @@ export default function EqiImportModal({ onClose }) {
                 ))}
               </div>
 
-              {fundPositions[g.parsedName] != null && (
+              {positions[g.parsedName] != null && (
                 <p className="muted" style={{ fontSize: '0.76rem', marginTop: 10, marginBottom: 0 }}>
-                  Saldo atual declarado no extrato: {formatCurrency(fundPositions[g.parsedName])} — será aplicado
+                  Saldo atual declarado no extrato: {formatCurrency(positions[g.parsedName])} — será aplicado
                   como valor atual da posição após os movimentos acima.
                 </p>
               )}

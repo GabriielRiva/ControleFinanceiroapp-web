@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight, ArrowDownRight,
-  Upload, Loader2,
+  Upload, Loader2, History,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,9 +21,10 @@ import { colorByIndex } from '../utils/categories';
 import InvestmentModal from '../components/InvestmentModal';
 import QuickAmountModal from '../components/QuickAmountModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-// carregado só quando o modal é aberto — pdfjs-dist é pesado e a maioria
+// carregados só quando o modal é aberto — pdfjs-dist é pesado e a maioria
 // das visitas nunca importa um extrato
 const EqiImportModal = lazy(() => import('../components/EqiImportModal'));
+const EqiPerformanceImportModal = lazy(() => import('../components/EqiPerformanceImportModal'));
 
 export default function Investments() {
   const { investments, snapshots, portfolio, transactions } = useData();
@@ -38,6 +39,7 @@ export default function Investments() {
   const [allocView, setAllocView] = useState('class'); // 'class' | 'asset'
   const [saving, setSaving] = useState(false);
   const [showEqiImport, setShowEqiImport] = useState(false);
+  const [showEqiPerfImport, setShowEqiPerfImport] = useState(false);
 
   const allocation = useMemo(
     () => investments
@@ -275,6 +277,9 @@ export default function Investments() {
           <button className="btn btn-ghost" onClick={() => setShowEqiImport(true)}>
             <Upload size={17} /> <span className="add-label">Importar extrato</span>
           </button>
+          <button className="btn btn-ghost" onClick={() => setShowEqiPerfImport(true)}>
+            <History size={17} /> <span className="add-label">Importar histórico</span>
+          </button>
           <button className="btn btn-primary" onClick={() => setModal({})}>
             <Plus size={18} /> <span className="add-label">Novo investimento</span>
           </button>
@@ -494,6 +499,17 @@ export default function Investments() {
           </div>
         }>
           <EqiImportModal onClose={() => setShowEqiImport(false)} />
+        </Suspense>
+      )}
+      {showEqiPerfImport && (
+        <Suspense fallback={
+          <div className="overlay">
+            <div className="card card-pad" style={{ margin: 'auto', textAlign: 'center' }}>
+              <Loader2 size={22} className="spin" />
+            </div>
+          </div>
+        }>
+          <EqiPerformanceImportModal onClose={() => setShowEqiPerfImport(false)} />
         </Suspense>
       )}
     </>

@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Plus, Pencil, Trash2, TrendingUp, TrendingDown, CalendarPlus, Wallet, ArrowUpRight, ArrowDownRight,
-  Upload, Loader2, History,
+  Upload, Loader2, History, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +40,7 @@ export default function Investments() {
   const [saving, setSaving] = useState(false);
   const [showEqiImport, setShowEqiImport] = useState(false);
   const [showEqiPerfImport, setShowEqiPerfImport] = useState(false);
+  const [showClosed, setShowClosed] = useState(false);
 
   const allocation = useMemo(
     () => investments
@@ -100,6 +101,64 @@ export default function Investments() {
     })),
     [snapshots]
   );
+
+  // separa posições ainda ativas das que já fecharam de vez (aportado e
+  // valor atual zerados) — encerradas ficam recolhidas por padrão
+  const activeInvestments = useMemo(
+    () => investments.filter((p) => (Number(p.invested) || 0) > 0 || (Number(p.currentValue) || 0) > 0),
+    [investments]
+  );
+  const closedInvestments = useMemo(
+    () => investments.filter((p) => (Number(p.invested) || 0) === 0 && (Number(p.currentValue) || 0) === 0),
+    [investments]
+  );
+
+  function renderInvestmentCard(p) {
+    const inv = Number(p.invested) || 0;
+    const cur = Number(p.currentValue) || 0;
+    const profit = cur - inv;
+    const pct = inv > 0 ? (profit / inv) * 100 : 0;
+    const color = profit >= 0 ? 'var(--income)' : 'var(--expense)';
+    return (
+      <div className="card goal-card" key={p.id}>
+        <div className="goal-top">
+          <div>
+            <div className="goal-name">{p.name}</div>
+            <div className="row gap-sm" style={{ marginTop: 3, alignItems: 'center' }}>
+              <span className="pill" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+                {p.assetClass || 'Outros'}
+              </span>
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Aportado: {formatCurrency(inv)}
+                {p.date ? ` · desde ${formatDate(p.date)}` : ''}
+              </span>
+            </div>
+          </div>
+          <div className="col" style={{ alignItems: 'flex-end' }}>
+            <div className="num" style={{ fontWeight: 700, fontSize: '1.12rem' }}>{formatCurrency(cur)}</div>
+            <div className="num" style={{ color, fontWeight: 600, fontSize: '0.85rem' }}>
+              {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({pct.toFixed(2)}%)
+            </div>
+          </div>
+        </div>
+
+        <div className="row gap-sm wrap" style={{ marginTop: 14 }}>
+          <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setAporte(p)}>
+            <Plus size={15} /> Aporte
+          </button>
+          <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setResgate(p)}>
+            <ArrowDownRight size={15} /> Resgatar
+          </button>
+          <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setUpdateBal(p)}>
+            Atualizar saldo
+          </button>
+          <div className="grow" />
+          <button className="mini-btn" onClick={() => setModal({ edit: p })} aria-label="Editar"><Pencil size={16} /></button>
+          <button className="mini-btn danger" onClick={() => setConfirm(p)} aria-label="Remover"><Trash2 size={16} /></button>
+        </div>
+      </div>
+    );
+  }
 
   /* ---------- ações ---------- */
   const handleSave = async (data) => {
@@ -383,54 +442,33 @@ export default function Investments() {
           </button>
         </div>
       ) : (
-        <div className="col gap">
-          {investments.map((p) => {
-            const inv = Number(p.invested) || 0;
-            const cur = Number(p.currentValue) || 0;
-            const profit = cur - inv;
-            const pct = inv > 0 ? (profit / inv) * 100 : 0;
-            const color = profit >= 0 ? 'var(--income)' : 'var(--expense)';
-            return (
-              <div className="card goal-card" key={p.id}>
-                <div className="goal-top">
-                  <div>
-                    <div className="goal-name">{p.name}</div>
-                    <div className="row gap-sm" style={{ marginTop: 3, alignItems: 'center' }}>
-                      <span className="pill" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
-                        {p.assetClass || 'Outros'}
-                      </span>
-                      <span className="muted" style={{ fontSize: '0.82rem' }}>
-                        Aportado: {formatCurrency(inv)}
-                        {p.date ? ` · desde ${formatDate(p.date)}` : ''}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="col" style={{ alignItems: 'flex-end' }}>
-                    <div className="num" style={{ fontWeight: 700, fontSize: '1.12rem' }}>{formatCurrency(cur)}</div>
-                    <div className="num" style={{ color, fontWeight: 600, fontSize: '0.85rem' }}>
-                      {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({pct.toFixed(2)}%)
-                    </div>
-                  </div>
-                </div>
+        <>
+          {activeInvestments.length === 0 ? (
+            <p className="muted" style={{ fontSize: '0.86rem' }}>Nenhum investimento ativo no momento.</p>
+          ) : (
+            <div className="col gap">
+              {activeInvestments.map((p) => renderInvestmentCard(p))}
+            </div>
+          )}
 
-                <div className="row gap-sm wrap" style={{ marginTop: 14 }}>
-                  <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setAporte(p)}>
-                    <Plus size={15} /> Aporte
-                  </button>
-                  <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setResgate(p)}>
-                    <ArrowDownRight size={15} /> Resgatar
-                  </button>
-                  <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => setUpdateBal(p)}>
-                    Atualizar saldo
-                  </button>
-                  <div className="grow" />
-                  <button className="mini-btn" onClick={() => setModal({ edit: p })} aria-label="Editar"><Pencil size={16} /></button>
-                  <button className="mini-btn danger" onClick={() => setConfirm(p)} aria-label="Remover"><Trash2 size={16} /></button>
+          {closedInvestments.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: '0.84rem', padding: '8px 12px' }}
+                onClick={() => setShowClosed((v) => !v)}
+              >
+                {showClosed ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showClosed ? 'Ocultar' : 'Mostrar'} encerrados ({closedInvestments.length})
+              </button>
+              {showClosed && (
+                <div className="col gap" style={{ marginTop: 12 }}>
+                  {closedInvestments.map((p) => renderInvestmentCard(p, true))}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       <p className="muted" style={{ fontSize: '0.8rem', marginTop: 18, lineHeight: 1.6 }}>

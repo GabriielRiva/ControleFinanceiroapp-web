@@ -109,16 +109,19 @@ export default function EqiImportModal({ onClose }) {
         }
 
         for (const ev of checkedEvents) {
-          if (ev.type === 'redemption' && ev.amount > position.currentValue) {
+          if (ev.type === 'redemption' && ev.positionAmount > position.currentValue) {
             // o resgate vale mais do que sabíamos que a posição tinha —
             // sinal de rendimento (juros/valorização) que não foi capturado
             // por nenhum "atualizar saldo" no meio do caminho. Sobe o valor
             // atual pra refletir isso ANTES do resgate, senão o pro-rata
-            // trunca o valor creditado (foi o que aconteceu com o CDB: só
-            // creditava R$2.000 de um resgate de R$2.111,71 de verdade).
-            position = { ...position, currentValue: ev.amount };
+            // trunca o valor considerado.
+            position = { ...position, currentValue: ev.positionAmount };
           }
-          const result = ev.type === 'application' ? applyAporte(position, ev.amount) : applyResgate(position, ev.amount);
+          // custo/valor da posição usa o Valor BRUTO (o que realmente
+          // entrou/saiu do fundo) — usar o líquido (com IOF somado numa
+          // aplicação, ou já descontado o IR num resgate) faz o % de
+          // rendimento ficar errado, contando imposto como parte do fundo.
+          const result = ev.type === 'application' ? applyAporte(position, ev.positionAmount) : applyResgate(position, ev.positionAmount);
           position = { ...position, invested: result.invested, currentValue: result.currentValue };
           await updateInvestment(positionId, {
             name: position.name, assetClass: position.assetClass, date: position.date,
@@ -127,7 +130,9 @@ export default function EqiImportModal({ onClose }) {
           await addTransaction(user.uid, {
             type: ev.type,
             description: `${ev.type === 'application' ? 'Aplicação' : 'Resgate'}: ${position.name}`,
-            amount: ev.type === 'application' ? ev.amount : result.take,
+            // a transação usa o Valor LÍQUIDO — é o que realmente
+            // entrou/saiu da sua conta, o que importa pro saldo
+            amount: ev.cashAmount,
             category: 'Investimentos',
             date: ev.date,
             paymentMethod: 'Pix',
@@ -232,10 +237,15 @@ export default function EqiImportModal({ onClose }) {
                         <div style={{ fontSize: '0.84rem', fontWeight: 600 }}>
                           {ev.type === 'application' ? 'Aporte' : 'Resgate'} · {formatDate(ev.date)}
                         </div>
+                        {Math.abs(ev.positionAmount - ev.cashAmount) > 0.01 && (
+                          <div className="muted" style={{ fontSize: '0.72rem' }}>
+                            posição: {formatCurrency(ev.positionAmount)} (diferença é IR/IOF)
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span className="num" style={{ fontWeight: 700, color: ev.type === 'application' ? 'var(--expense)' : 'var(--income)' }}>
-                      {formatCurrency(ev.amount)}
+                      {formatCurrency(ev.cashAmount)}
                     </span>
                   </label>
                 ))}

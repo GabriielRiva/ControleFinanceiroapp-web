@@ -72,7 +72,13 @@ function parseMovements(text) {
           kind: 'fundo',
           date: toISODate(dd, mm, yy),
           transacao,
-          valorLiquido: toAmount(numTokens[5]),
+          // Valor Bruto = quanto realmente entrou/saiu do FUNDO (custo/valor
+          // da posição). Valor Líquido = quanto entrou/saiu da CONTA (já com
+          // IOF somado numa aplicação, ou IR descontado num resgate). São
+          // propositalmente diferentes — usar o líquido como "investido"
+          // conta o IOF/IR como se fosse parte do fundo, distorcendo o %.
+          positionAmount: toAmount(numTokens[2]),
+          cashAmount: toAmount(numTokens[5]),
           isComeCotas: /\(COME COTAS\)/.test(transacao),
         });
       }
@@ -116,7 +122,8 @@ function parseMovements(text) {
           kind: 'renda_fixa',
           date: toISODate(dd, mm, yy),
           transacao,
-          valorLiquido: toAmount(numTokens[5]),
+          positionAmount: toAmount(numTokens[2]),
+          cashAmount: toAmount(numTokens[5]),
           isComeCotas: false,
         });
       }
@@ -130,8 +137,9 @@ function parseMovements(text) {
     if (e.isComeCotas) continue;
     const type = isAplicacao(e.transacao) ? 'application' : 'redemption';
     const key = `${e.asset}|${e.date}|${type}`;
-    grouped[key] = grouped[key] || { asset: e.asset, date: e.date, type, amount: 0, kind: e.kind };
-    grouped[key].amount += e.valorLiquido;
+    grouped[key] = grouped[key] || { asset: e.asset, date: e.date, type, positionAmount: 0, cashAmount: 0, kind: e.kind };
+    grouped[key].positionAmount += e.positionAmount;
+    grouped[key].cashAmount += e.cashAmount;
   }
 
   return Object.values(grouped).sort((a, b) => (a.date < b.date ? -1 : 1));

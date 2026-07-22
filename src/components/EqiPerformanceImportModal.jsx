@@ -30,9 +30,25 @@ export default function EqiPerformanceImportModal({ onClose }) {
         setStatus('idle');
         return;
       }
+
+      // ponto de partida do "investido acumulado": o snapshot já existente
+      // mais recente ANTES do primeiro mês desse PDF (se houver) — assim um
+      // PDF de período parcial (ex: só o mês atual) não zera o histórico
+      const sortedExisting = [...snapshots].sort((a, b) => (a.date < b.date ? -1 : 1));
+      const firstMonth = parsed[0].monthKey;
+      const priorSnapshot = sortedExisting.filter((s) => s.date < firstMonth).pop();
+      let runningInvested = priorSnapshot ? Number(priorSnapshot.totalInvested) || 0 : 0;
+
       const built = parsed.map((p) => {
+        runningInvested += p.movimentacoes;
         const existing = snapshots.find((s) => s.date === p.monthKey);
-        return { ...p, checked: true, existingId: existing?.id || null };
+        return {
+          monthKey: p.monthKey,
+          totalValue: p.patrimonioFinal,
+          totalInvested: runningInvested,
+          checked: true,
+          existingId: existing?.id || null,
+        };
       });
       setRows(built);
       setStatus('parsed');

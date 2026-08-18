@@ -156,15 +156,25 @@ export default function EqiImportModal({ onClose }) {
       }
 
       // registra o snapshot do mês do relatório — soma aportado/saldo de
-      // TODAS as posições (as que essa planilha atualizou agora + as que
-      // continuam com o valor que já estava salvo), igual o botão
+      // TODAS as posições (as que essa planilha atualizou/criou agora + as
+      // que continuam com o valor que já estava salvo), igual o botão
       // "Registrar mês" já fazia manualmente. saveSnapshot substitui o mês
       // se já existir (não duplica o ponto no gráfico).
       if (monthKey) {
-        const totals = investments.reduce((acc, inv) => {
-          const v = updatedById[inv.id] || { invested: inv.invested, currentValue: inv.currentValue };
-          return { invested: acc.invested + (Number(v.invested) || 0), current: acc.current + (Number(v.currentValue) || 0) };
-        }, { invested: 0, current: 0 });
+        // NÃO dá pra confiar só em `investments` (o array do contexto) —
+        // se esse import criou posições novas agora mesmo, o Firestore ainda
+        // não teve tempo de sincronizar de volta pro React, então elas não
+        // apareceriam aqui e o snapshot sairia contando de menos (ou 0).
+        // Por isso soma sobre a UNIÃO dos ids: o que já existia no contexto
+        // + o que foi criado/atualizado neste import, sempre priorizando o
+        // valor mais novo (updatedById).
+        const byId = {};
+        for (const inv of investments) byId[inv.id] = { invested: inv.invested, currentValue: inv.currentValue };
+        Object.assign(byId, updatedById);
+        const totals = Object.values(byId).reduce((acc, v) => ({
+          invested: acc.invested + (Number(v.invested) || 0),
+          current: acc.current + (Number(v.currentValue) || 0),
+        }), { invested: 0, current: 0 });
         const existing = snapshots.find((s) => s.date === monthKey);
         await saveSnapshot(user.uid, monthKey, totals.invested, totals.current, existing?.id);
       }

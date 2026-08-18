@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- fundo escuro, mesma cor do tema dark do app -->
+  <rect width="512" height="512" rx="112" fill="#0c1413"/>
+
+  <!-- anel externo do "o" -->
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#f4f6f5" stroke-width="40"/>
+
+  <!-- arco verde (gauge), de 12h até ~2h -->
+  <path
+    d="M 256 128 A 128 128 0 0 1 366 194"
+    fill="none"
+    stroke="#14b8a6"
+    stroke-width="40"
+    stroke-linecap="round"
+  />
+</svg>

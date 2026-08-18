@@ -1,7 +1,7 @@
 {
-  "name": "FinanceApp — Controle Financeiro",
-  "short_name": "FinanceApp",
-  "description": "Controle financeiro pessoal: receitas, despesas, metas e relatórios.",
+  "name": "Zeno — Controle Financeiro",
+  "short_name": "Zeno",
+  "description": "Zeno: controle financeiro pessoal — receitas, despesas, metas e relatórios.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0c1413",

@@ -1,0 +1,173 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // dono do documento que está sendo escrito (userId do payload == uid)
+    function ownsIncoming() {
+      return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // dono do documento já existente (para read/update/delete)
+    function ownsExisting() {
+      return request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    function isNumber(v) { return v is number; }
+    function isString(v) { return v is string; }
+
+    // ---- Perfil do usuário (doc id = uid; não tem campo userId) ----
+    match /users/{userId} {
+      allow read, create, update, delete: if isOwner(userId);
+    }
+
+    // ---- Transações (5 tipos) ----
+    match /transactions/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validTransaction();
+      allow update: if ownsExisting() && ownsIncoming() && validTransaction();
+      function validTransaction() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'amount', 'date'])
+          && isNumber(request.resource.data.amount)
+          && isString(request.resource.data.date)
+          && request.resource.data.type in ['income', 'expense', 'application', 'redemption', 'transfer'];
+      }
+    }
+
+    // ---- Metas ----
+    match /goals/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validGoal();
+      allow update: if ownsExisting() && ownsIncoming() && validGoal();
+      function validGoal() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'targetAmount', 'currentAmount'])
+          && isNumber(request.resource.data.targetAmount)
+          && isNumber(request.resource.data.currentAmount);
+      }
+    }
+
+    // ---- Investimentos ----
+    match /investments/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validInvestment();
+      allow update: if ownsExisting() && ownsIncoming() && validInvestment();
+      function validInvestment() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'invested', 'currentValue'])
+          && isNumber(request.resource.data.invested)
+          && isNumber(request.resource.data.currentValue);
+      }
+    }
+
+    // ---- Snapshots do patrimônio ----
+    match /portfolioSnapshots/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validSnapshot();
+      allow update: if ownsExisting() && ownsIncoming() && validSnapshot();
+      function validSnapshot() {
+        return request.resource.data.keys().hasAll(['userId', 'date', 'totalInvested', 'totalValue'])
+          && isNumber(request.resource.data.totalInvested)
+          && isNumber(request.resource.data.totalValue);
+      }
+    }
+
+    // ---- Contas fixas ----
+    match /recurringExpenses/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validRecurring();
+      allow update: if ownsExisting() && ownsIncoming() && validRecurring();
+      function validRecurring() {
+        return request.resource.data.keys().hasAll(['userId', 'description', 'amount', 'category'])
+          && isNumber(request.resource.data.amount);
+      }
+    }
+
+    // ---- Cartões ----
+    match /cards/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validCard();
+      allow update: if ownsExisting() && ownsIncoming() && validCard();
+      function validCard() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'closingDay', 'dueDay'])
+          && isNumber(request.resource.data.closingDay)
+          && isNumber(request.resource.data.dueDay);
+      }
+    }
+
+    // ---- Faturas pagas (status de pagamento por cartão+mês; a fatura em si
+    //      é derivada das transações, não existe como doc) ----
+    match /invoicePayments/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validInvoicePayment();
+      allow update: if ownsExisting() && ownsIncoming() && validInvoicePayment();
+      function validInvoicePayment() {
+        return request.resource.data.keys().hasAll(['userId', 'cardId', 'invoiceMonth', 'paid'])
+          && isString(request.resource.data.cardId)
+          && isString(request.resource.data.invoiceMonth);
+      }
+    }
+
+    // ---- Financiamentos / empréstimos (Price ou SAC) ----
+    match /financings/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validFinancing();
+      allow update: if ownsExisting() && ownsIncoming() && validFinancing();
+      function validFinancing() {
+        return request.resource.data.keys().hasAll(
+            ['userId', 'name', 'principal', 'monthlyRatePct', 'system', 'installmentsTotal', 'startDate'])
+          && isNumber(request.resource.data.principal)
+          && isNumber(request.resource.data.installmentsTotal)
+          && request.resource.data.system in ['price', 'sac'];
+      }
+    }
+
+    // ---- Consórcios (correção monetária e contemplação registradas manualmente) ----
+    match /consortiums/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validConsortium();
+      allow update: if ownsExisting() && ownsIncoming() && validConsortium();
+      function validConsortium() {
+        return request.resource.data.keys().hasAll(
+            ['userId', 'name', 'assetValue', 'installmentsTotal', 'startDate'])
+          && isNumber(request.resource.data.assetValue)
+          && isNumber(request.resource.data.installmentsTotal);
+      }
+    }
+
+    // ---- Favoritos (lançamento rápido) ----
+    match /favorites/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validFavorite();
+      allow update: if ownsExisting() && ownsIncoming() && validFavorite();
+      function validFavorite() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'description', 'amount', 'category'])
+          && isNumber(request.resource.data.amount);
+      }
+    }
+
+    // ---- Orçamentos por categoria ----
+    match /budgets/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validBudget();
+      allow update: if ownsExisting() && ownsIncoming() && validBudget();
+      function validBudget() {
+        return request.resource.data.keys().hasAll(['userId', 'category', 'limit'])
+          && isNumber(request.resource.data.limit);
+      }
+    }
+
+    // ---- Categorias personalizadas ----
+    match /categories/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && validCategory();
+      allow update: if ownsExisting() && ownsIncoming() && validCategory();
+      function validCategory() {
+        return request.resource.data.keys().hasAll(['userId', 'type', 'name'])
+          && request.resource.data.type in ['income', 'expense'];
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 // Service worker mínimo — habilita a instalação como app (PWA).
 // Estratégia: network-first com fallback ao cache do app shell.
-const CACHE = 'financeapp-v1';
+const CACHE = 'zeno-v1';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

@@ -11,8 +11,18 @@
 // batendo exatamente com os totais declarados pela EQI).
 
 const RENDA_FIXA_TYPES = new Set(['CDB', 'LCA', 'LCI', 'CRI', 'CRA', 'LC', 'DEBENTURE']);
-const TRANSACAO_KEYWORDS = ['VENCIMENTO DE TÍTULO', 'COMPRA', 'VENDA', 'JUROS', 'AMORTIZAÇÃO'];
+// Tesouro Direto aparece nos cabeçalhos como label composto, ex: "TESOURO
+// DIRETO - LTN" — não é um tipo simples como os de cima, por isso é checado
+// à parte (ver isRendaFixaLabel).
+const TESOURO_LABEL_RE = /^TESOURO DIRETO - (.+)$/;
+// 'COMPRA DEFINITIVA' precisa vir ANTES de 'COMPRA' — o match é por
+// endsWith, e "COMPRA" sozinho nunca bate no fim de "...COMPRA DEFINITIVA".
+const TRANSACAO_KEYWORDS = ['VENCIMENTO DE TÍTULO', 'COMPRA DEFINITIVA', 'COMPRA', 'VENDA', 'JUROS', 'AMORTIZAÇÃO'];
 const APLICACAO_KEYWORDS = ['APLICAÇÃO', 'COMPRA'];
+
+function isRendaFixaLabel(label) {
+  return RENDA_FIXA_TYPES.has(label) || TESOURO_LABEL_RE.test(label);
+}
 
 function cleanName(s) {
   return s.replace(/\u0000/g, '').replace(/\s+/g, ' ').trim();
@@ -54,7 +64,7 @@ function parseMovements(text) {
     const bodyEnd = i + 1 < headers.length ? headers[i + 1].start : text.length;
     const body = text.slice(h.end, bodyEnd);
     const lines = body.split('\n').map((l) => l.trim()).filter(Boolean);
-    const isRendaFixa = RENDA_FIXA_TYPES.has(h.label.trim());
+    const isRendaFixa = isRendaFixaLabel(h.label.trim());
 
     if (!isRendaFixa) {
       const assetName = cleanName(h.label);
@@ -150,11 +160,18 @@ function parseMovements(text) {
  * da tabela "Fundo de Investimento - Posição - Portfólio de fundos".
  */
 function parseFundPositions(text) {
-  const re = /([^\n]+?) - Classe CNPJ:[^\n]*\n(\d{2}\/\d{2}\/\d{2}) ([\d.,]+) ([\d.,]+) ([\d.,]+) (-|[\d.,]+) (-|[\d.,]+) ([\d.,]+) (-?[\d.,]+)/g;
+  const re = /([^\n]+?) - Classe CNPJ:[^\n]*\n(\d{2}\/\d{2}\/\d{2}) ([^\n]+)/g;
   const positions = {};
   let m;
   while ((m = re.exec(text))) {
-    positions[cleanName(m[1])] = toAmount(m[8]);
+    const tokens = m[3].trim().split(/\s+/).filter((t) => /^-?[\d.,]+$/.test(t) || t === '-');
+    // colunas da linha: [Saldo Líquido data anterior (opcional)] Quantidade
+    // de Cotas, Cotação Atual, Saldo Bruto, Provisão de IR, Provisão de IOF,
+    // Saldo Líquido, Variação Nominal — a primeira coluna só existe se o
+    // fundo já tinha posição antes do início do período do extrato, então o
+    // total de números varia (7 ou 8). Saldo Líquido é sempre o penúltimo.
+    if (tokens.length < 2) continue;
+    positions[cleanName(m[1])] = toAmount(tokens[tokens.length - 2]);
   }
   return positions;
 }
@@ -166,20 +183,38 @@ function parseFundPositions(text) {
  * de movimentação de renda fixa, então casam automaticamente.
  */
 function parseRendaFixaPositions(text) {
-  const re = /Detalhamento - (CDB|LCA|LCI|CRI|CRA|LC|DEBENTURE) \| ([^\n]+)/g;
+  // "TESOURO DIRETO - " é um prefixo opcional (Tesouro Direto usa label
+  // composto no PDF, ex: "TESOURO DIRETO - LTN") — o código extraído fica só
+  // "LTN", igual ao usado em parseMovements, pra bater com a chave dos eventos.
+  const re = /Detalhamento - (?:TESOURO DIRETO - )?(CDB|LCA|LCI|CRI|CRA|LC|DEBENTURE|LTN|LFT|NTN-B|NTN-F) \| ([^\n]+)/g;
   const positions = {};
   let m;
   while ((m = re.exec(text))) {
     const type = m[1];
     const emissor = cleanName(m[2]);
     const bodyStart = m.index + m[0].length;
-    const disclaimerIdx = text.indexOf('Disclaimers', bodyStart);
-    const body = text.slice(bodyStart, disclaimerIdx > 0 ? disclaimerIdx : bodyStart + 800);
+    // NÃO usar "Disclaimers" como fronteira — esse texto se repete no
+    // rodapé de toda página do PDF da EQI, então a próxima ocorrência pode
+    // estar páginas depois, engolindo tabelas inteiras de outros ativos no
+    // meio do caminho. A seção real termina na próxima seção de
+    // Detalhamento/Movimentação/Posição Consolidada, que fica bem mais perto.
+    const nextBoundaries = ['Detalhamento -', 'Movimenta', 'Posição Consolidada', 'Disclaimers']
+      .map((marker) => text.indexOf(marker, bodyStart))
+      .filter((idx) => idx > 0);
+    const bodyEnd = nextBoundaries.length ? Math.min(...nextBoundaries) : bodyStart + 800;
+    const body = text.slice(bodyStart, bodyEnd);
     const flatBody = body.replace(/\n/g, ' ');
     const codeMatch = flatBody.match(new RegExp(`${type}-\\s*([A-Z0-9]+)`));
     const ativoCode = codeMatch ? `${type}-${codeMatch[1].replace(/\s+/g, '')}` : type;
     const lines = body.split('\n').map((l) => l.trim()).filter(Boolean);
-    const lastLine = lines[lines.length - 1] || '';
+    // a fronteira corta logo antes do próximo cabeçalho, mas o começo desse
+    // cabeçalho ("Renda fixa - ...") pode sobrar como última linha sem
+    // número nenhum — por isso busca de trás pra frente a última linha que
+    // realmente tem dígito, em vez de assumir que é sempre a última do corpo.
+    let lastLine = '';
+    for (let li = lines.length - 1; li >= 0; li--) {
+      if (/\d/.test(lines[li])) { lastLine = lines[li]; break; }
+    }
     const nums = lastLine.match(/-?[\d.,]+/g) || [];
     if (nums.length === 0) continue;
     const key = `${emissor} / ${ativoCode}`;
